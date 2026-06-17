@@ -21,13 +21,16 @@ export const assignResult = v.union(
   v.object({ variant: v.string(), isNew: v.boolean() }),
 );
 
-/** Result of `logExposure`: the enrolled variant, or `null` when not enrolled. */
+/**
+ * Result of `logExposure` / `peek`: the enrolled variant, or `null` when the
+ * subject is not enrolled (experiment absent or not `running`).
+ */
 export const exposureResult = v.union(
   v.object({ variant: v.null() }),
   v.object({ variant: v.string() }),
 );
 
-/** Projection of an experiment definition returned by `getExperiment`. */
+/** Projection of an experiment definition returned by `getExperiment` / `listExperiments`. */
 export const experimentDef = v.object({
   key: v.string(),
   scope: v.string(),
@@ -43,12 +46,20 @@ export const assignmentProjection = v.object({
   assignedAt: v.number(),
 });
 
-/** Per-variant exposure tally returned by `results`. */
+/**
+ * Per-variant tally returned by `results`. `assigned` and `subjects` together with
+ * the configured `weight` let an analyst compute sample-ratio-mismatch (observed
+ * vs expected split) and the funnel denominator host-side.
+ */
 export const variantResult = v.object({
   /** The variant key. */
   variant: v.string(),
+  /** Subjects assigned to this variant (the realized split for SRM). */
+  assigned: v.number(),
   /** Distinct subjects exposed to this variant (the funnel denominator). */
   subjects: v.number(),
   /** Total exposure events recorded for this variant. */
   exposures: v.number(),
+  /** The configured weight from the current definition (0 if the variant is gone). */
+  weight: v.number(),
 });

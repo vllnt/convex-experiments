@@ -51,8 +51,20 @@ const assignmentProjection = v.union(
 const variantResults = v.array(
   v.object({
     variant: v.string(),
+    assigned: v.number(),
     subjects: v.number(),
     exposures: v.number(),
+    weight: v.number(),
+  }),
+);
+const experimentList = v.array(
+  v.object({
+    key: v.string(),
+    scope: v.string(),
+    status: statusArg,
+    variants: variantArg,
+    salt: v.string(),
+    createdAt: v.number(),
   }),
 );
 
@@ -116,6 +128,52 @@ export const results = query({
   args: { key: v.string(), scope: v.optional(v.string()) },
   returns: variantResults,
   handler: (ctx, a) => experiments.results(ctx, a.key, a.scope),
+});
+
+export const peek = query({
+  args: { key: v.string(), subjectRef: v.string(), scope: v.optional(v.string()) },
+  returns: exposureResult,
+  handler: (ctx, a) => experiments.peek(ctx, a.key, a.subjectRef, a.scope),
+});
+
+/** Full-options listExperiments — exercises explicit scope + status filter. */
+export const listExperiments = query({
+  args: { scope: v.optional(v.string()), status: v.optional(statusArg) },
+  returns: experimentList,
+  handler: (ctx, a) =>
+    experiments.listExperiments(ctx, { scope: a.scope, status: a.status }),
+});
+
+/** Minimal listExperiments — omits scope + status to exercise client defaults. */
+export const listExperimentsDefaults = query({
+  args: {},
+  returns: experimentList,
+  handler: (ctx) => experiments.listExperiments(ctx),
+});
+
+export const forgetSubject = mutation({
+  args: { key: v.string(), subjectRef: v.string(), scope: v.optional(v.string()) },
+  returns: v.boolean(),
+  handler: (ctx, a) => experiments.forgetSubject(ctx, a.key, a.subjectRef, a.scope),
+});
+
+/** Full-options deleteExperiment — exercises explicit scope + batch. */
+export const deleteExperiment = mutation({
+  args: {
+    key: v.string(),
+    scope: v.optional(v.string()),
+    batch: v.optional(v.number()),
+  },
+  returns: v.number(),
+  handler: (ctx, a) =>
+    experiments.deleteExperiment(ctx, a.key, { scope: a.scope, batch: a.batch }),
+});
+
+/** Minimal deleteExperiment — omits scope + batch to exercise the default batch. */
+export const deleteExperimentDefaults = mutation({
+  args: { key: v.string() },
+  returns: v.number(),
+  handler: (ctx, a) => experiments.deleteExperiment(ctx, a.key),
 });
 
 /**

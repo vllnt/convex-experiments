@@ -44,6 +44,20 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         { created: boolean },
         Name
       >;
+      deleteExperiment: FunctionReference<
+        "mutation",
+        "internal",
+        { batch: number; key: string; scope: string },
+        number,
+        Name
+      >;
+      forgetSubject: FunctionReference<
+        "mutation",
+        "internal",
+        { key: string; scope: string; subjectRef: string },
+        boolean,
+        Name
+      >;
       logExposure: FunctionReference<
         "mutation",
         "internal",
@@ -81,11 +95,38 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         },
         Name
       >;
+      listExperiments: FunctionReference<
+        "query",
+        "internal",
+        { scope: string; status?: "draft" | "running" | "stopped" },
+        Array<{
+          createdAt: number;
+          key: string;
+          salt: string;
+          scope: string;
+          status: "draft" | "running" | "stopped";
+          variants: Array<{ key: string; weight: number }>;
+        }>,
+        Name
+      >;
+      peek: FunctionReference<
+        "query",
+        "internal",
+        { key: string; scope: string; subjectRef: string },
+        { variant: null } | { variant: string },
+        Name
+      >;
       results: FunctionReference<
         "query",
         "internal",
         { key: string; scope: string },
-        Array<{ exposures: number; subjects: number; variant: string }>,
+        Array<{
+          assigned: number;
+          exposures: number;
+          subjects: number;
+          variant: string;
+          weight: number;
+        }>,
         Name
       >;
     };

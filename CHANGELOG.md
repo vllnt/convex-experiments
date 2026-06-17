@@ -6,6 +6,30 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- `peek` — a read-only, deterministic query that returns a subject's sticky variant **without
+  persisting** (the SSR / flicker-free first-paint path).
+- `listExperiments(scope, status?)` — discovery / management surface.
+- `forgetSubject` — erase one subject's assignment + exposure (GDPR right-to-erasure), decrementing
+  tallies; `deleteExperiment` — bounded, self-rescheduling cascade delete of an experiment + all data.
+- `results` now returns `assigned` and `weight` per variant (alongside `subjects`/`exposures`) so a
+  host can check sample-ratio-mismatch, and reads maintained `variantTallies` in **O(variants)**
+  instead of scanning every exposure row.
+- `INVALID_VARIANTS` errors now carry a `reason` (`empty` / `non_positive_weight` / `duplicate_key`).
+
+### Changed
+
+- **`scope` is folded into the assignment hash** (`${scope}:${salt}`) so the same `subjectRef` buckets
+  independently per scope — fixes cross-tenant assignment correlation.
+
+### Fixed
+
+- **Definition immutability (`EXPERIMENT_LOCKED`).** Changing `variants` or `salt` after a subject is
+  assigned now throws instead of silently splitting the population across two randomizations. The
+  earlier "change salt to re-randomize" claim was incorrect for enrolled subjects and is removed from
+  the docs; re-randomize by defining a new experiment key.
+
 ## [0.1.0] - 2026-06-17
 
 ### Added

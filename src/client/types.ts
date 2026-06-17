@@ -24,8 +24,9 @@ export interface DefineOptions {
   /** Namespace for this experiment. Defaults to the client `defaultScope`. */
   scope?: string;
   /**
-   * Hash salt for deterministic assignment. Defaults to the experiment `key`;
-   * change it to re-randomize buckets without changing subject ids.
+   * Hash salt for deterministic assignment. Defaults to the experiment `key`.
+   * Fixed once any subject is assigned (changing it after enrollment throws
+   * `EXPERIMENT_LOCKED`); to re-randomize, define a new experiment key.
    */
   salt?: string;
   /** Initial lifecycle status. Defaults to the client `defaultStatus`. */
@@ -62,12 +63,16 @@ export type AssignOutcome =
 /** Outcome of {@link Experiments.logExposure}: the variant, or `null` if not enrolled. */
 export type ExposureOutcome = { variant: string | null };
 
-/** A per-variant exposure tally, as returned by {@link Experiments.results}. */
+/** A per-variant tally, as returned by {@link Experiments.results}. */
 export interface VariantResult {
   /** The variant key. */
   variant: string;
+  /** Subjects assigned to this variant (the realized split, for SRM). */
+  assigned: number;
   /** Distinct subjects exposed to this variant (the funnel denominator). */
   subjects: number;
   /** Total exposure events recorded for this variant. */
   exposures: number;
+  /** The configured weight from the current definition (0 if the variant is gone). */
+  weight: number;
 }

@@ -8,6 +8,9 @@ export const DEFAULT_SCOPE = "global";
 /** Lifecycle status the client applies to `define` when the caller omits one. */
 export const DEFAULT_STATUS = "running";
 
+/** Default page size for a `deleteExperiment` cascade pass before it self-reschedules. */
+export const DEFAULT_DELETE_BATCH = 200;
+
 /** A weighted variant: an opaque variant key and its relative selection weight. */
 export interface Variant {
   /** The host's opaque variant key (e.g. `"control"`, `"treatment"`). */
@@ -35,9 +38,9 @@ export function fnv1a(input: string): number {
  * Deterministically pick a variant for `subjectRef` from `variants`, weighted by
  * each variant's `weight`. The same `(salt, subjectRef)` always maps to the same
  * variant — sticky assignment with no storage — and the distribution matches the
- * weights. `salt` lets a host re-randomize an experiment (a fresh re-run) without
- * changing subject ids. Assumes a non-empty `variants` with positive weights; the
- * caller validates that upstream.
+ * weights. The component folds `scope` into the salt so the same subject buckets
+ * independently per scope. Assumes a non-empty `variants` with positive weights;
+ * the caller validates that upstream.
  */
 export function pickVariant(
   variants: readonly Variant[],

@@ -3,16 +3,21 @@
 > Deterministic A/B experimentation — sticky variant assignment and deduped exposure tracking, as a Convex component
 
 `@vllnt/convex-experiments` is a publishable Convex component. It targets `convex@^1.41.0`. It stores
-three sandboxed tables — `experiments` (the definition: weighted `variants`, lifecycle `status`,
+four sandboxed tables — `experiments` (the definition: weighted `variants`, lifecycle `status`,
 `salt`, unique per `(scope, key)`), `assignments` (a subject's sticky variant, persisted on first
-`assign`), and `exposures` (a deduped per-subject tally). A subject's variant is a pure function of
-`(salt, subjectRef)` — FNV-1a hashed onto the cumulative-weight line — so it is sticky and weight-
-respecting even before persistence; `assign` records it, later calls replay it. Enrollment is gated
-on `running` (`draft`/`stopped`/absent return `{ variant: null }`); stopping preserves recorded data.
-`logExposure` dedups exposures into one tallied row per subject, and `results` reports distinct
-subjects and total exposures per variant. Time is server-sourced. The component assigns and counts
-exposure; the host owns release control, the experiment/variant meaning, the opaque `subjectRef`, and
-the outcome metric (measured in the host's own tables, joined on the variant).
+`assign`), `exposures` (a deduped per-subject row), and `variantTallies` (maintained per-variant
+`assigned`/`subjects`/`exposures` counts). A subject's variant is a pure function of
+`(scope, salt, subjectRef)` — FNV-1a hashed onto the cumulative-weight line, `scope` folded in so the
+same subject buckets independently per scope — sticky and weight-respecting even before persistence;
+`assign` records it, later calls replay it, and `peek` returns it read-only (no write) for SSR. `salt`
+and `variants` are immutable once a subject is assigned (`EXPERIMENT_LOCKED`); re-randomize by defining
+a new key. Enrollment is gated on `running` (`draft`/`stopped`/absent return `{ variant: null }`).
+`logExposure` dedups exposures and advances the tallies; `results` reads them in O(variants), returning
+`assigned`/`subjects`/`exposures`/`weight` per variant (enough for a sample-ratio-mismatch check).
+`forgetSubject` erases one subject (GDPR), `deleteExperiment` cascades, `listExperiments` discovers.
+Time is server-sourced. The component assigns + counts exposure; the host owns release control, the
+experiment/variant meaning, the opaque `subjectRef`, statistical significance, and the outcome metric
+(measured in the host's own tables, joined on the variant).
 
 ## Docs
 

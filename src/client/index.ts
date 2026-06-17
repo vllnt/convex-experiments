@@ -14,7 +14,7 @@ import type {
   Variant,
   VariantResult,
 } from "./types.js";
-import { DEFAULT_SCOPE, DEFAULT_STATUS } from "../shared.js";
+import { DEFAULT_DELETE_BATCH, DEFAULT_SCOPE, DEFAULT_STATUS } from "../shared.js";
 
 /**
  * The experiments component's function references, as exposed on the host via
@@ -53,6 +53,18 @@ export interface ExperimentsComponent {
       { scope: string; key: string; subjectRef: string },
       ExposureOutcome
     >;
+    forgetSubject: FunctionReference<
+      "mutation",
+      "internal",
+      { scope: string; key: string; subjectRef: string },
+      boolean
+    >;
+    deleteExperiment: FunctionReference<
+      "mutation",
+      "internal",
+      { scope: string; key: string; batch: number },
+      number
+    >;
   };
   queries: {
     getExperiment: FunctionReference<
@@ -61,11 +73,23 @@ export interface ExperimentsComponent {
       { scope: string; key: string },
       ExperimentDefinition | null
     >;
+    listExperiments: FunctionReference<
+      "query",
+      "internal",
+      { scope: string; status?: ExperimentStatus },
+      ExperimentDefinition[]
+    >;
     getAssignment: FunctionReference<
       "query",
       "internal",
       { scope: string; key: string; subjectRef: string },
       Assignment | null
+    >;
+    peek: FunctionReference<
+      "query",
+      "internal",
+      { scope: string; key: string; subjectRef: string },
+      ExposureOutcome
     >;
     results: FunctionReference<
       "query",
@@ -130,8 +154,9 @@ export class Experiments {
   /**
    * Create or update an experiment. `variants` are weighted (equal weights split
    * evenly). `salt` defaults to `key`; `status` to the client default (`running`).
-   * Returns `{ created }` — `false` when an existing definition was updated.
-   * Updating never disturbs existing sticky assignments.
+   * Returns `{ created }` — `false` when an existing definition was updated. Status
+   * transitions are always allowed; `variants`/`salt` are immutable once a subject
+   * is assigned (throws `EXPERIMENT_LOCKED`).
    */
   define(
     ctx: RunMutationCtx,
@@ -223,7 +248,41 @@ export class Experiments {
     });
   }
 
-  /** Per-variant exposure tallies (distinct subjects + total exposures). */
+  /**
+   * Read-only deterministic variant for a subject — the sticky variant **without
+   * persisting**. Returns the stored assignment if present, else the deterministic
+   * pick; `null` when not enrolled. Use for SSR / a flicker-free first paint, then
+   * call `logExposure` to enroll + tally.
+   */
+  peek(
+    ctx: RunQueryCtx,
+    key: string,
+    subjectRef: string,
+    scope?: string,
+  ): Promise<ExposureOutcome> {
+    return ctx.runQuery(this.component.queries.peek, {
+      scope: this.scopeOf(scope),
+      key,
+      subjectRef,
+    });
+  }
+
+  /** Every experiment in a scope, optionally filtered by `status`. */
+  listExperiments(
+    ctx: RunQueryCtx,
+    opts: { scope?: string; status?: ExperimentStatus } = {},
+  ): Promise<ExperimentDefinition[]> {
+    return ctx.runQuery(this.component.queries.listExperiments, {
+      scope: this.scopeOf(opts.scope),
+      status: opts.status,
+    });
+  }
+
+  /**
+   * Per-variant tallies — `assigned`, distinct `subjects` exposed, total
+   * `exposures`, and the configured `weight` (for sample-ratio-mismatch). Reads
+   * O(variants), not the exposure table.
+   */
   results(
     ctx: RunQueryCtx,
     key: string,
@@ -232,6 +291,41 @@ export class Experiments {
     return ctx.runQuery(this.component.queries.results, {
       scope: this.scopeOf(scope),
       key,
+    });
+  }
+
+  /**
+   * Erase a subject's assignment + exposure in one experiment (GDPR right-to-
+   * erasure), decrementing tallies. Returns `true` if anything was deleted. Loop
+   * over `listExperiments` to erase a subject across a whole scope.
+   */
+  forgetSubject(
+    ctx: RunMutationCtx,
+    key: string,
+    subjectRef: string,
+    scope?: string,
+  ): Promise<boolean> {
+    return ctx.runMutation(this.component.mutations.forgetSubject, {
+      scope: this.scopeOf(scope),
+      key,
+      subjectRef,
+    });
+  }
+
+  /**
+   * Delete an experiment and all of its data (definition, assignments, exposures,
+   * tallies). Bounded + self-rescheduling; returns the rows removed this pass.
+   * Idempotent and safe on an absent experiment.
+   */
+  deleteExperiment(
+    ctx: RunMutationCtx,
+    key: string,
+    opts: { scope?: string; batch?: number } = {},
+  ): Promise<number> {
+    return ctx.runMutation(this.component.mutations.deleteExperiment, {
+      scope: this.scopeOf(opts.scope),
+      key,
+      batch: opts.batch ?? DEFAULT_DELETE_BATCH,
     });
   }
 }

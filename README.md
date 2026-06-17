@@ -31,9 +31,12 @@ component handles assignment and exposure. Domain-neutral: any subject, any surf
 - **Deterministic + sticky** — the same subject always lands in the same weighted variant, even before anything is stored.
 - **Weighted variants** — split traffic by relative weights (`1:1`, `90:10`, N-way); equal weights split evenly.
 - **Enrollment lifecycle** — `draft → running → stopped`; only `running` enrolls, and stopping preserves recorded data.
-- **Deduped exposures** — one tallied row per subject; `results` reports distinct subjects and total exposures per variant.
-- **Salted re-runs** — change `salt` to reshuffle buckets without changing subject ids.
-- **Scopes** — global by default, or namespace per tenant / surface.
+- **Deduped exposures + O(variants) results** — one tallied row per subject; `results` reads maintained per-variant tallies (`assigned`/`subjects`/`exposures`/`weight`), never scanning the exposure table.
+- **Sample-ratio-ready** — `assigned` + `weight` per variant let you check observed vs expected split (SRM).
+- **`peek`** — a read-only deterministic query returns a subject's sticky variant without writing (SSR / flicker-free first paint).
+- **Immutable once assigned** — `variants`/`salt` are fixed after enrollment (changing them throws); define a new key to re-randomize.
+- **Lifecycle + GDPR** — `listExperiments` to discover, `forgetSubject` to erase one subject, `deleteExperiment` to cascade-delete.
+- **Scopes** — global by default, or namespace per tenant / surface (folded into the hash for independent bucketing).
 - **Fully typed** — variant keys, weights, and outcomes are concrete types end to end; no `any`.
 - **Server-sourced time** — assignment timestamps come from the server, never the caller.
 
@@ -87,9 +90,13 @@ host-side conversion recorder.
 | `setStatus(ctx, key, status, scope?)` | mutation | `boolean` |
 | `assign(ctx, key, subjectRef, scope?)` | mutation | `{ variant: null } \| { variant: string; isNew: boolean }` |
 | `logExposure(ctx, key, subjectRef, scope?)` | mutation | `{ variant: string \| null }` |
+| `forgetSubject(ctx, key, subjectRef, scope?)` | mutation | `boolean` (GDPR erasure) |
+| `deleteExperiment(ctx, key, { scope?, batch? })` | mutation | `number` (cascade delete) |
 | `getExperiment(ctx, key, scope?)` | query | `ExperimentDefinition \| null` |
+| `listExperiments(ctx, { scope?, status? })` | query | `ExperimentDefinition[]` |
 | `getAssignment(ctx, key, subjectRef, scope?)` | query | `{ variant, assignedAt } \| null` |
-| `results(ctx, key, scope?)` | query | `{ variant, subjects, exposures }[]` |
+| `peek(ctx, key, subjectRef, scope?)` | query | `{ variant: string \| null }` (no write) |
+| `results(ctx, key, scope?)` | query | `{ variant, assigned, subjects, exposures, weight }[]` |
 
 Full reference: [docs/API.md](docs/API.md).
 
