@@ -93,6 +93,7 @@
     "convex-component",
     "experiments",
     "ab-testing",
+    "split-testing",
     "feature-experimentation"
   ]
 }
