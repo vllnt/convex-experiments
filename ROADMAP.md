@@ -21,6 +21,22 @@ Deterministic sticky assignment + deduped exposure, shipped at 0.1.0 (canary).
 - `ship-core-assignment.5` — `done` — 100% E2E coverage via the `example/` host harness (happy + adversarial), lint/typecheck/build green.
 - `ship-core-assignment.6` — `done` — standard repo: CI, canary `publish.yml`, docs set, `.claude/rules`, repo hardening.
 
+## harden-correctness — `done`
+
+Implemented from the 2026-06-17 multi-perspective review (5 reviewers). Shipped at 0.1.0 (canary),
+100% coverage maintained.
+
+- `harden-correctness.1` — `done` — **`EXPERIMENT_LOCKED` guard**: `variants`/`salt` immutable once a subject is assigned (removed the false "change salt to re-randomize" claim that silently split the population).
+- `harden-correctness.2` — `done` — **`scope` folded into the assignment hash** (`${scope}:${salt}`) — fixes cross-tenant assignment correlation.
+- `harden-correctness.3` — `done` — **`results` is O(variants)** via a maintained `variantTallies` table (no exposure-table scan / read-limit failure) and returns `assigned` + `weight` for sample-ratio-mismatch.
+- `harden-correctness.4` — `done` — **lifecycle + GDPR**: `deleteExperiment` (cascade, self-rescheduling), `forgetSubject` (erasure), `listExperiments` (discovery).
+- `harden-correctness.5` — `done` — **`peek`** (read-only deterministic assignment for SSR / flicker-free paint); `INVALID_VARIANTS` carries a `reason`.
+
+> Deferred to later phases (design-sized, not half-built): layers/universes + holdouts
+> (`assignment-strategies`), full significance/SRM stats + sequential testing
+> (`results-and-significance`), the `./react` hooks built on `peek` (`reactive-read-surface`),
+> typed-variant generics, segmentation dimensions, and sharded-counter write-sharding for the tallies.
+
 ## reactive-read-surface — `planned`
 
 Optional `./react` tooling, decided by the front-tooling analysis once a real consumer needs a
@@ -35,7 +51,7 @@ Richer measurement helpers, without owning the host's outcome metric.
 
 - `results-and-significance.1` — `planned` — optional conversion-binding helper (host records the outcome; component joins exposure ↔ outcome on the variant).
 - `results-and-significance.2` — `planned` — confidence / significance summary over `results` (evaluate composing `@convex-dev/aggregate` for large exposure sets vs in-query grouping).
-- `results-and-significance.3` — `planned` — guard against unbounded `results` scans at scale (index/rollup strategy).
+- `results-and-significance.3` — `done` — guard against unbounded `results` scans (now O(variants) via `variantTallies`; see `harden-correctness.3`). Sharded-counter write-sharding remains a follow-up.
 
 ## assignment-strategies — `planned`
 
