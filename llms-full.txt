@@ -110,8 +110,30 @@ Full reference: [docs/API.md](docs/API.md).
 
 ## React
 
-Backend-only at this version — no `./react` entry. Assignment and exposure are recorded server-side;
-a reactive read hook may ship in a later version.
+Optional, tree-shakeable hooks via `@vllnt/convex-experiments/react` (`react` is an optional peer
+dep — a backend-only consumer pulls none of it). Each hook wraps `useQuery` over a query reference
+**you re-export** from your app, so the component never owns your `api`.
+
+```tsx
+// convex/experiments.ts — re-export the host-side wrappers (auth gated)
+// export const myVariant = query({ args: { userId: v.string() },
+//   handler: (ctx, { userId }) => experiments.peek(ctx, "checkout_button", userId) });
+
+import { useVariant } from "@vllnt/convex-experiments/react";
+import { api } from "@/convex/_generated/api";
+
+function CheckoutButton({ userId }: { userId: string }) {
+  // deterministic first paint via peek → no flash-of-control
+  const variant = useVariant(api.experiments.myVariant, { key: "checkout_button", subjectRef: userId });
+  return variant === "treatment" ? <OneClick /> : <Classic />;
+}
+```
+
+| Hook | Wraps | Returns |
+|------|-------|---------|
+| `useVariant(peekRef, args)` | `peek` | `string \| null \| undefined` (variant / not-enrolled / loading) |
+| `useAssignment(getAssignmentRef, args)` | `getAssignment` | `Assignment \| null \| undefined` |
+| `useExperimentResults(resultsRef, args)` | `results` | `VariantResult[] \| undefined` |
 
 ## Security
 
@@ -161,6 +183,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Optional `@vllnt/convex-experiments/react` entry — `useVariant` (flicker-free, on `peek`),
+  `useAssignment`, `useExperimentResults`. Thin `useQuery` wrappers over the host's re-exported refs;
+  `react` is an optional peer dep; render-tested in jsdom at 100%.
 - `peek` — a read-only, deterministic query that returns a subject's sticky variant **without
   persisting** (the SSR / flicker-free first-paint path).
 - `listExperiments(scope, status?)` — discovery / management surface.
@@ -841,6 +866,82 @@ export type {
   Variant,
   VariantResult,
 };
+
+```
+
+---
+
+## src/react/index.tsx
+
+```ts
+/**
+ * Optional, tree-shakeable React front-tooling for `@vllnt/convex-experiments`.
+ *
+ * Thin reactive hooks over `useQuery` from `convex/react`. Each takes the HOST's
+ * re-exported query reference plus its args — the component never imports the host
+ * `api`. `react` and `convex/react` are optional peer deps: a backend-only consumer
+ * pulls none of this code.
+ *
+ * NO-LEAK CONTRACT: these hooks expose only non-secret experiment data — the
+ * subject's own variant key, their assignment, and aggregate per-variant tallies.
+ * There is no secret or cross-subject payload. `useVariant` reads the deterministic
+ * `peek` query, so it paints the correct variant on first render (no flash of
+ * control); call the `logExposure` mutation to enroll + tally.
+ */
+
+import type { FunctionReference } from "convex/server";
+import { useQuery } from "convex/react";
+import type { Assignment, VariantResult } from "../client/types.js";
+
+/**
+ * Reactive, flicker-free variant for a subject — wraps the host's re-exported
+ * `peek` query (deterministic, read-only). Returns the variant key, `null` when not
+ * enrolled, or `undefined` while the query loads.
+ */
+export function useVariant(
+  peekRef: FunctionReference<
+    "query",
+    "public",
+    { scope?: string; key: string; subjectRef: string },
+    { variant: string | null }
+  >,
+  args: { scope?: string; key: string; subjectRef: string },
+): string | null | undefined {
+  const result = useQuery(peekRef, args);
+  return result === undefined ? undefined : result.variant;
+}
+
+/**
+ * Reactive sticky assignment — wraps the host's re-exported `getAssignment` query.
+ * `null` when not enrolled, `undefined` while loading.
+ */
+export function useAssignment(
+  getAssignmentRef: FunctionReference<
+    "query",
+    "public",
+    { scope?: string; key: string; subjectRef: string },
+    Assignment | null
+  >,
+  args: { scope?: string; key: string; subjectRef: string },
+): Assignment | null | undefined {
+  return useQuery(getAssignmentRef, args);
+}
+
+/**
+ * Reactive per-variant tallies (`assigned`/`subjects`/`exposures`/`weight`) for a
+ * live results dashboard — wraps the host's re-exported `results` query.
+ */
+export function useExperimentResults(
+  resultsRef: FunctionReference<
+    "query",
+    "public",
+    { scope?: string; key: string },
+    VariantResult[]
+  >,
+  args: { scope?: string; key: string },
+): VariantResult[] | undefined {
+  return useQuery(resultsRef, args);
+}
 
 ```
 

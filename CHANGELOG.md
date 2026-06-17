@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Optional `@vllnt/convex-experiments/react` entry — `useVariant` (flicker-free, on `peek`),
+  `useAssignment`, `useExperimentResults`. Thin `useQuery` wrappers over the host's re-exported refs;
+  `react` is an optional peer dep; render-tested in jsdom at 100%.
 - `peek` — a read-only, deterministic query that returns a subject's sticky variant **without
   persisting** (the SSR / flicker-free first-paint path).
 - `listExperiments(scope, status?)` — discovery / management surface.

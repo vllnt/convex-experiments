@@ -102,8 +102,30 @@ Full reference: [docs/API.md](docs/API.md).
 
 ## React
 
-Backend-only at this version — no `./react` entry. Assignment and exposure are recorded server-side;
-a reactive read hook may ship in a later version.
+Optional, tree-shakeable hooks via `@vllnt/convex-experiments/react` (`react` is an optional peer
+dep — a backend-only consumer pulls none of it). Each hook wraps `useQuery` over a query reference
+**you re-export** from your app, so the component never owns your `api`.
+
+```tsx
+// convex/experiments.ts — re-export the host-side wrappers (auth gated)
+// export const myVariant = query({ args: { userId: v.string() },
+//   handler: (ctx, { userId }) => experiments.peek(ctx, "checkout_button", userId) });
+
+import { useVariant } from "@vllnt/convex-experiments/react";
+import { api } from "@/convex/_generated/api";
+
+function CheckoutButton({ userId }: { userId: string }) {
+  // deterministic first paint via peek → no flash-of-control
+  const variant = useVariant(api.experiments.myVariant, { key: "checkout_button", subjectRef: userId });
+  return variant === "treatment" ? <OneClick /> : <Classic />;
+}
+```
+
+| Hook | Wraps | Returns |
+|------|-------|---------|
+| `useVariant(peekRef, args)` | `peek` | `string \| null \| undefined` (variant / not-enrolled / loading) |
+| `useAssignment(getAssignmentRef, args)` | `getAssignment` | `Assignment \| null \| undefined` |
+| `useExperimentResults(resultsRef, args)` | `results` | `VariantResult[] \| undefined` |
 
 ## Security
 

@@ -20,6 +20,8 @@ Convex component. It follows the vllnt Component Standard (see the `oss-packages
 src/
 ├── shared.ts              # constants + pure deterministic assignment (fnv1a, pickVariant)
 ├── test.ts                # convex-test register() helper
+├── react/
+│   └── index.tsx          # optional ./react hooks (useVariant, useAssignment, useExperimentResults)
 ├── client/
 │   ├── index.ts           # Experiments class (consumer-facing API)
 │   └── types.ts           # public TypeScript interfaces
@@ -112,9 +114,11 @@ passes an opaque `subjectRef`. `scope` namespaces per tenant / surface; both are
 
 - **Server-sourced time:** every handler reads `Date.now()` itself; no API accepts a caller timestamp.
 
-- **Backend-only at 0.1.0 (no `./react` entry):** a reactive `useVariant` (built on `peek`) /
-  `useExperimentResults` surface is a real future addition — deferred until a first consumer asks for
-  it, per the front-tooling analysis in the README.
+- **Optional `./react` front-tooling:** thin hooks (`useVariant` on the deterministic `peek` for a
+  flicker-free first paint, `useAssignment`, `useExperimentResults`) wrap `useQuery` over the host's
+  **re-exported** query refs — the component never owns the host `api`. `react` is an optional peer
+  dep (a backend-only consumer pulls none of it); the hooks are render-tested in jsdom at 100%. No
+  secret/cross-subject data is exposed (no-leak rule).
 
 ## Conventions
 
