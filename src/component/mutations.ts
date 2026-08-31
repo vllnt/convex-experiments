@@ -79,7 +79,7 @@ async function bumpTally(
       exposures,
     });
   } else {
-    await ctx.db.patch(row._id, {
+    await ctx.db.patch("variantTallies", row._id, {
       assigned: row.assigned + assigned,
       subjects: row.subjects + subjects,
       exposures: row.exposures + exposures,
@@ -186,7 +186,7 @@ export const define = mutation({
         });
       }
     }
-    await ctx.db.patch(existing._id, {
+    await ctx.db.patch("experiments", existing._id, {
       status: args.status,
       variants: args.variants,
       salt: args.salt,
@@ -214,7 +214,7 @@ export const setStatus = mutation({
     if (existing === null) {
       return false;
     }
-    await ctx.db.patch(existing._id, { status: args.status });
+    await ctx.db.patch("experiments", existing._id, { status: args.status });
     return true;
   },
 });
@@ -292,7 +292,7 @@ export const logExposure = mutation({
         exposures: 1,
       });
     } else {
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch("exposures", existing._id, {
         lastExposedAt: now,
         count: existing.count + 1,
       });
@@ -326,7 +326,7 @@ export const forgetSubject = mutation({
       await bumpTally(ctx, args.scope, args.key, assignment.variant, {
         assigned: -1,
       });
-      await ctx.db.delete(assignment._id);
+      await ctx.db.delete("assignments", assignment._id);
       deleted = true;
     }
     const exposure = await ctx.db
@@ -343,7 +343,7 @@ export const forgetSubject = mutation({
         subjects: -1,
         exposures: -exposure.count,
       });
-      await ctx.db.delete(exposure._id);
+      await ctx.db.delete("exposures", exposure._id);
       deleted = true;
     }
     return deleted;
@@ -369,7 +369,7 @@ export const deleteExperiment = mutation({
       )
       .take(args.batch);
     for (const row of assignments) {
-      await ctx.db.delete(row._id);
+      await ctx.db.delete("assignments", row._id);
       removed++;
     }
     const exposures = await ctx.db
@@ -379,7 +379,7 @@ export const deleteExperiment = mutation({
       )
       .take(args.batch);
     for (const row of exposures) {
-      await ctx.db.delete(row._id);
+      await ctx.db.delete("exposures", row._id);
       removed++;
     }
     const tallies = await ctx.db
@@ -389,7 +389,7 @@ export const deleteExperiment = mutation({
       )
       .take(args.batch);
     for (const row of tallies) {
-      await ctx.db.delete(row._id);
+      await ctx.db.delete("variantTallies", row._id);
       removed++;
     }
     if (removed > 0) {
@@ -407,7 +407,7 @@ export const deleteExperiment = mutation({
       )
       .unique();
     if (def !== null) {
-      await ctx.db.delete(def._id);
+      await ctx.db.delete("experiments", def._id);
     }
     return removed;
   },
