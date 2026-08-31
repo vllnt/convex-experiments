@@ -6,7 +6,7 @@ This component's own roadmap. Phases are immutable kebab-case **outcome slugs**;
 **Status vocabulary:** `planned` · `in-progress` · `done` · `blocked` · `dropped`
 
 > Hub-level milestones (creation, fleet programs, the canary→stable hold) live in the
-> `vllnt/convex-components` hub `ROADMAP.md`. This file tracks only this package's own work.
+> `vllnt/oss-packages` hub `ROADMAP.md`. This file tracks only this package's own work.
 
 ---
 
@@ -19,7 +19,7 @@ Deterministic sticky assignment + deduped exposure, shipped at 0.1.0 (canary).
 - `ship-core-assignment.3` — `done` — `logExposure` deduped per-subject tally; `results` distinct-subjects + total-exposures aggregation.
 - `ship-core-assignment.4` — `done` — `getExperiment` / `getAssignment` projections; scope namespacing; server-sourced time.
 - `ship-core-assignment.5` — `done` — 100% E2E coverage via the `example/` host harness (happy + adversarial), lint/typecheck/build green.
-- `ship-core-assignment.6` — `done` — standard repo: CI, canary `publish.yml`, docs set, `.claude/rules`, repo hardening.
+- `ship-core-assignment.6` — `done` — standard repo: CI, canary `publish.yml`, docs set, `AGENTS.md` policy, repo hardening.
 
 ## harden-correctness — `done`
 
