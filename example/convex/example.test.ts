@@ -391,6 +391,13 @@ describe("experiments — forgetSubject (GDPR erasure)", () => {
 });
 
 describe("experiments — deleteExperiment (cascade)", () => {
+  test.each([Number.NaN, 0, -1, 1.5, 501])("rejects invalid batch %s", async (batch) => {
+    const t = setup();
+    await expect(
+      t.mutation(api.example.deleteExperiment, { key: "exp", batch }),
+    ).rejects.toThrow(/INVALID_BATCH|integer between/);
+  });
+
   test("deletes definition + assignments + exposures + tallies, batched", async () => {
     const t = setup();
     await t.mutation(api.example.define, { key: "exp_del", variants: TWO_EVEN });

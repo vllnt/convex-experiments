@@ -361,6 +361,12 @@ export const deleteExperiment = mutation({
   args: { scope: v.string(), key: v.string(), batch: v.number() },
   returns: v.number(),
   handler: async (ctx, args) => {
+    if (!Number.isFinite(args.batch) || !Number.isInteger(args.batch) || args.batch < 1 || args.batch > 500) {
+      throw new ConvexError({
+        code: "INVALID_BATCH",
+        message: "batch must be an integer between 1 and 500",
+      });
+    }
     let removed = 0;
     const assignments = await ctx.db
       .query("assignments")
