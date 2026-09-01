@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject zero, fractional, non-finite, negative, and oversized experiment-deletion batches to
+  prevent infinite self-scheduling and oversized transactions.
+
 ### Changed
 
 - Treat Convex `_generated` output as CLI-owned, exclude it from formatting, and expose a

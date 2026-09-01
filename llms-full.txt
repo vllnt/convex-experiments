@@ -181,6 +181,18 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject zero, fractional, non-finite, negative, and oversized experiment-deletion batches to
+  prevent infinite self-scheduling and oversized transactions.
+
+### Changed
+
+- Treat Convex `_generated` output as CLI-owned, exclude it from formatting, and expose a
+  dedicated codegen script.
+- Refresh all direct dependencies to their latest compatible releases for canary validation.
+- Require `convex@^1.45.0` and update `convex-test` to `^0.0.56`.
+
 ### Added
 
 - Optional `@vllnt/convex-experiments/react` entry — `useVariant` (flicker-free, on `peek`),
@@ -1183,7 +1195,7 @@ async function bumpTally(
       exposures,
     });
   } else {
-    await ctx.db.patch(row._id, {
+    await ctx.db.patch("variantTallies", row._id, {
       assigned: row.assigned + assigned,
       subjects: row.subjects + subjects,
       exposures: row.exposures + exposures,
@@ -1290,7 +1302,7 @@ export const define = mutation({
         });
       }
     }
-    await ctx.db.patch(existing._id, {
+    await ctx.db.patch("experiments", existing._id, {
       status: args.status,
       variants: args.variants,
       salt: args.salt,
@@ -1318,7 +1330,7 @@ export const setStatus = mutation({
     if (existing === null) {
       return false;
     }
-    await ctx.db.patch(existing._id, { status: args.status });
+    await ctx.db.patch("experiments", existing._id, { status: args.status });
     return true;
   },
 });
@@ -1396,7 +1408,7 @@ export const logExposure = mutation({
         exposures: 1,
       });
     } else {
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch("exposures", existing._id, {
         lastExposedAt: now,
         count: existing.count + 1,
       });
@@ -1430,7 +1442,7 @@ export const forgetSubject = mutation({
       await bumpTally(ctx, args.scope, args.key, assignment.variant, {
         assigned: -1,
       });
-      await ctx.db.delete(assignment._id);
+      await ctx.db.delete("assignments", assignment._id);
       deleted = true;
     }
     const exposure = await ctx.db
@@ -1447,7 +1459,7 @@ export const forgetSubject = mutation({
         subjects: -1,
         exposures: -exposure.count,
       });
-      await ctx.db.delete(exposure._id);
+      await ctx.db.delete("exposures", exposure._id);
       deleted = true;
     }
     return deleted;
@@ -1465,6 +1477,12 @@ export const deleteExperiment = mutation({
   args: { scope: v.string(), key: v.string(), batch: v.number() },
   returns: v.number(),
   handler: async (ctx, args) => {
+    if (!Number.isFinite(args.batch) || !Number.isInteger(args.batch) || args.batch < 1 || args.batch > 500) {
+      throw new ConvexError({
+        code: "INVALID_BATCH",
+        message: "batch must be an integer between 1 and 500",
+      });
+    }
     let removed = 0;
     const assignments = await ctx.db
       .query("assignments")
@@ -1473,7 +1491,7 @@ export const deleteExperiment = mutation({
       )
       .take(args.batch);
     for (const row of assignments) {
-      await ctx.db.delete(row._id);
+      await ctx.db.delete("assignments", row._id);
       removed++;
     }
     const exposures = await ctx.db
@@ -1483,7 +1501,7 @@ export const deleteExperiment = mutation({
       )
       .take(args.batch);
     for (const row of exposures) {
-      await ctx.db.delete(row._id);
+      await ctx.db.delete("exposures", row._id);
       removed++;
     }
     const tallies = await ctx.db
@@ -1493,7 +1511,7 @@ export const deleteExperiment = mutation({
       )
       .take(args.batch);
     for (const row of tallies) {
-      await ctx.db.delete(row._id);
+      await ctx.db.delete("variantTallies", row._id);
       removed++;
     }
     if (removed > 0) {
@@ -1511,7 +1529,7 @@ export const deleteExperiment = mutation({
       )
       .unique();
     if (def !== null) {
-      await ctx.db.delete(def._id);
+      await ctx.db.delete("experiments", def._id);
     }
     return removed;
   },
