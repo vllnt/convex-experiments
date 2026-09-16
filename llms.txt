@@ -2,7 +2,7 @@
 
 > Deterministic A/B experimentation — sticky variant assignment and deduped exposure tracking, as a Convex component
 
-`@vllnt/convex-experiments` is a publishable Convex component. It targets `convex@^1.41.0`. It stores
+`@vllnt/convex-experiments` is a publishable Convex component. It targets `convex@^1.45.0`. It stores
 four sandboxed tables — `experiments` (the definition: weighted `variants`, lifecycle `status`,
 `salt`, unique per `(scope, key)`), `assignments` (a subject's sticky variant, persisted on first
 `assign`), `exposures` (a deduped per-subject row), and `variantTallies` (maintained per-variant
@@ -18,6 +18,14 @@ a new key. Enrollment is gated on `running` (`draft`/`stopped`/absent return `{ 
 Time is server-sourced. The component assigns + counts exposure; the host owns release control, the
 experiment/variant meaning, the opaque `subjectRef`, statistical significance, and the outcome metric
 (measured in the host's own tables, joined on the variant).
+
+The README/API follow current `@canary`. Client defaults are `defaultScope:
+"global"` and `defaultStatus: "running"` (define enrolls immediately unless
+configured otherwise). Salt defaults to the experiment key; bucketing hashes
+`${scope}:${salt}:${subjectRef}` and depends on ordered variants/weights.
+Exposure rows are per-subject, but repeated calls increment total exposures.
+Delete batches default to 200 per table, must be integers 1–500, and return only
+the current pass count. Named mounts isolate state; scopes are not authorization.
 
 ## Docs
 
@@ -37,4 +45,3 @@ experiment/variant meaning, the opaque `subjectRef`, statistical significance, a
 - [Security Policy](SECURITY.md): Vulnerability reporting policy
 - [Code of Conduct](CODE_OF_CONDUCT.md): Community participation guidelines
 - [License](LICENSE): MIT license
-- [Full source bundle](llms-full.txt): Aggregated README, changelog, API docs, and key source files
