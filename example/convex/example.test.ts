@@ -175,14 +175,19 @@ describe("experiments — assign (sticky, enrollment-gated)", () => {
   test("first assign enrolls (isNew:true), replays (isNew:false), bumps assigned tally", async () => {
     const t = setup();
     await t.mutation(api.example.define, { key: "exp_a", variants: TWO_EVEN });
+    // A transaction's time never falls behind the previous commit, so move the
+    // clock forward to make the stamped assignment time deterministic.
+    vi.setSystemTime(5_000);
     const first = await t.mutation(api.example.assign, { key: "exp_a", subjectRef: "u1" });
     expect(first).toMatchObject({ isNew: true });
     expect(first.variant).not.toBeNull();
+    vi.setSystemTime(9_000);
     const second = await t.mutation(api.example.assign, { key: "exp_a", subjectRef: "u1" });
     expect(second).toEqual({ variant: first.variant, isNew: false });
+    // The replay keeps the original assignment time.
     expect(
       await t.query(api.example.getAssignment, { key: "exp_a", subjectRef: "u1" }),
-    ).toEqual({ variant: first.variant, assignedAt: 0 });
+    ).toEqual({ variant: first.variant, assignedAt: 5_000 });
     const res = await t.query(api.example.results, { key: "exp_a" });
     const assignedRow = res.find((r) => r.variant === first.variant);
     expect(assignedRow).toMatchObject({ assigned: 1, subjects: 0, exposures: 0, weight: 1 });
