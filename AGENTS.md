@@ -144,13 +144,13 @@ passes an opaque `subjectRef`. `scope` namespaces per tenant / surface; both are
 
 | Changed | Update in the same commit |
 |---------|--------------------------|
-| Public API (define/setStatus/assign/logExposure/forgetSubject/deleteExperiment/getExperiment/listExperiments/getAssignment/peek/results) | README API Reference table, `docs/API.md`, `llms.txt` context, regenerate `llms-full.txt` |
+| Public API (define/setStatus/assign/logExposure/forgetSubject/deleteExperiment/getExperiment/listExperiments/getAssignment/peek/results) | README API Reference table, `docs/API.md`, `llms.txt` context |
 | Config options / defaults (`defaultScope`, `defaultStatus`, `salt`, delete batch) | README API Reference, `docs/API.md` constructor section |
 | Schema / tables / indexes | this file (Architecture), README Architecture, `docs/API.md` |
 | Error codes (`INVALID_VARIANTS`, `EXPERIMENT_LOCKED`) | `docs/API.md` → `## Error codes` table |
 | `peerDependencies.convex` version | `llms.txt` context line (`convex@^X.Y.Z`), `docs/API.md` Compatibility line, README Installation peer note |
 | Assignment / exposure / tally semantics | `docs/API.md`, Key design decisions above |
-| Any change | `pnpm generate:llms` to keep `llms-full.txt` current |
+| Any change | `pnpm generate:llms` to validate the `llms.txt` index |
 
 Grep old values before committing (e.g. `git grep "1.36.1"` → must be empty).
 
