@@ -1,13 +1,14 @@
 {
   "name": "@vllnt/convex-experiments",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic A/B experimentation — sticky variant assignment and deduped exposure tracking, as a Convex component",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.34.8",
   "files": [
     "dist",
-    "src"
+    "src",
+    "!src/**/*.test.*"
   ],
   "exports": {
     "./package.json": "./package.json",
