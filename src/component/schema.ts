@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { variant } from "./validators";
+import { variant } from "./validators.js";
 
 /**
  * Sandboxed tables — the experimentation ledger's own concern. No host tables are

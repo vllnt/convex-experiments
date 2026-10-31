@@ -200,6 +200,22 @@ function CheckoutButton({ userId }: { userId: string }) {
 
 See [docs/API.md](docs/API.md).
 
+## Testing your app
+
+`@vllnt/convex-experiments/test` exports `register(t, name = "experiments")` to
+mount the component in a `convex-test` instance. It needs `convex-test` and
+`vitest` (with Vite's `import.meta.glob`) in the consuming app:
+
+```ts
+/// <reference types="vite/client" />
+import { convexTest } from "convex-test";
+import { register } from "@vllnt/convex-experiments/test";
+import schema from "./schema";
+
+const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+register(t);
+```
+
 ## Testing
 
 ```bash

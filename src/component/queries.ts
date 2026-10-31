@@ -1,13 +1,13 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
-import { pickVariant } from "../shared";
+import { query } from "./_generated/server.js";
+import { pickVariant } from "../shared.js";
 import {
   assignmentProjection,
   experimentDef,
   experimentStatus,
   exposureResult,
   variantResult,
-} from "./validators";
+} from "./validators.js";
 
 /** The experiment definition for `(scope, key)`, or `null` if none exists. */
 export const getExperiment = query({

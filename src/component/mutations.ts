@@ -1,10 +1,22 @@
 import { ConvexError, v } from "convex/values";
-import { api } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
-import { mutation } from "./_generated/server";
-import { pickVariant, type Variant } from "../shared";
-import { assignResult, experimentStatus, exposureResult, variant } from "./validators";
+import { api } from "./_generated/api.js";
+import type { Doc } from "./_generated/dataModel.js";
+import type { MutationCtx } from "./_generated/server.js";
+import { mutation } from "./_generated/server.js";
+import { pickVariant, type Variant } from "../shared.js";
+import { assignResult, experimentStatus, exposureResult, variant } from "./validators.js";
+
+/** Reject empty identifiers: an empty scope/key/subjectRef would store a meaningless row. */
+function assertNonEmpty(fields: Record<string, string>): void {
+  for (const [name, value] of Object.entries(fields)) {
+    if (value === "") {
+      throw new ConvexError({
+        code: "INVALID_ARGUMENT",
+        message: `${name} must be non-empty`,
+      });
+    }
+  }
+}
 
 /**
  * Reject a malformed variant set before any write: at least one variant, every
@@ -23,6 +35,13 @@ function validateVariants(variants: readonly Variant[]): void {
   }
   const seen = new Set<string>();
   for (const candidate of variants) {
+    if (candidate.key === "") {
+      throw new ConvexError({
+        code: "INVALID_VARIANTS",
+        reason: "empty_key",
+        message: "variant keys must be non-empty",
+      });
+    }
     if (!(candidate.weight > 0 && isFinite(candidate.weight))) {
       throw new ConvexError({
         code: "INVALID_VARIANTS",
@@ -139,6 +158,7 @@ function variantsChanged(a: readonly Variant[], b: readonly Variant[]): boolean 
  * tallies. Status transitions (start/stop) are always allowed. To re-randomize or
  * reweight after enrollment, define a new experiment key.
  *
+ * @throws `ConvexError({ code: "INVALID_ARGUMENT" })` when `scope` or `key` is empty.
  * @throws `ConvexError({ code: "INVALID_VARIANTS", reason })` for a bad variant set.
  * @throws `ConvexError({ code: "EXPERIMENT_LOCKED" })` when `variants`/`salt` change
  *   after a subject has been assigned.
@@ -153,6 +173,7 @@ export const define = mutation({
   },
   returns: v.object({ created: v.boolean() }),
   handler: async (ctx, args) => {
+    assertNonEmpty({ scope: args.scope, key: args.key });
     validateVariants(args.variants);
     const existing = await ctx.db
       .query("experiments")
@@ -205,6 +226,7 @@ export const setStatus = mutation({
   args: { scope: v.string(), key: v.string(), status: experimentStatus },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    assertNonEmpty({ scope: args.scope, key: args.key });
     const existing = await ctx.db
       .query("experiments")
       .withIndex("by_scope_key", (q) =>
@@ -229,6 +251,7 @@ export const assign = mutation({
   args: { scope: v.string(), key: v.string(), subjectRef: v.string() },
   returns: assignResult,
   handler: async (ctx, args) => {
+    assertNonEmpty({ scope: args.scope, key: args.key, subjectRef: args.subjectRef });
     const experiment = await ctx.db
       .query("experiments")
       .withIndex("by_scope_key", (q) =>
@@ -252,6 +275,7 @@ export const logExposure = mutation({
   args: { scope: v.string(), key: v.string(), subjectRef: v.string() },
   returns: exposureResult,
   handler: async (ctx, args) => {
+    assertNonEmpty({ scope: args.scope, key: args.key, subjectRef: args.subjectRef });
     const experiment = await ctx.db
       .query("experiments")
       .withIndex("by_scope_key", (q) =>
@@ -312,6 +336,7 @@ export const forgetSubject = mutation({
   args: { scope: v.string(), key: v.string(), subjectRef: v.string() },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    assertNonEmpty({ scope: args.scope, key: args.key, subjectRef: args.subjectRef });
     let deleted = false;
     const assignment = await ctx.db
       .query("assignments")
@@ -361,6 +386,7 @@ export const deleteExperiment = mutation({
   args: { scope: v.string(), key: v.string(), batch: v.number() },
   returns: v.number(),
   handler: async (ctx, args) => {
+    assertNonEmpty({ scope: args.scope, key: args.key });
     if (!Number.isFinite(args.batch) || !Number.isInteger(args.batch) || args.batch < 1 || args.batch > 500) {
       throw new ConvexError({
         code: "INVALID_BATCH",
