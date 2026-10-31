@@ -439,6 +439,60 @@ describe("experiments — deleteExperiment (cascade)", () => {
   });
 });
 
+describe("experiments — empty identifiers are rejected", () => {
+  test.each(["key", "scope"] as const)("define rejects an empty %s and stores nothing", async (field) => {
+    const t = setup();
+    await expect(
+      t.mutation(api.example.define, { key: "exp_i", variants: TWO_EVEN, [field]: "" }),
+    ).rejects.toThrow(/INVALID_ARGUMENT/);
+    expect(await t.query(api.example.listExperimentsDefaults, {})).toEqual([]);
+  });
+
+  test("define rejects an empty variant key", async () => {
+    const t = setup();
+    await expect(
+      t.mutation(api.example.define, {
+        key: "exp_i",
+        variants: [
+          { key: "control", weight: 1 },
+          { key: "", weight: 1 },
+        ],
+      }),
+    ).rejects.toThrow(/INVALID_VARIANTS/);
+  });
+
+  test.each(["key", "scope"] as const)("setStatus rejects an empty %s", async (field) => {
+    const t = setup();
+    await expect(
+      t.mutation(api.example.setStatus, { key: "exp_i", status: "stopped", [field]: "" }),
+    ).rejects.toThrow(/INVALID_ARGUMENT/);
+  });
+
+  test.each(["key", "subjectRef", "scope"] as const)(
+    "assign, logExposure and forgetSubject reject an empty %s",
+    async (field) => {
+      const t = setup();
+      await t.mutation(api.example.define, { key: "exp_i", variants: TWO_EVEN });
+      const args = { key: "exp_i", subjectRef: "u_1", [field]: "" };
+      await expect(t.mutation(api.example.assign, args)).rejects.toThrow(/INVALID_ARGUMENT/);
+      await expect(t.mutation(api.example.logExposure, args)).rejects.toThrow(
+        /INVALID_ARGUMENT/,
+      );
+      await expect(t.mutation(api.example.forgetSubject, args)).rejects.toThrow(
+        /INVALID_ARGUMENT/,
+      );
+      expect(await t.query(api.example.getAssignment, { key: "exp_i", subjectRef: "u_1" })).toBeNull();
+    },
+  );
+
+  test.each(["key", "scope"] as const)("deleteExperiment rejects an empty %s", async (field) => {
+    const t = setup();
+    await expect(
+      t.mutation(api.example.deleteExperiment, { key: "exp_i", batch: 10, [field]: "" }),
+    ).rejects.toThrow(/INVALID_ARGUMENT/);
+  });
+});
+
 describe("experiments — host-side conversion measurement (boundary)", () => {
   test("the host records conversions in its own table, joined on the assigned variant", async () => {
     const t = setup();

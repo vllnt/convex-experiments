@@ -48,8 +48,10 @@ and orphan the tallies. Re-randomize or reweight by defining a new experiment
 key.
 
 **Validation.** Throws `ConvexError({ code: "INVALID_VARIANTS", reason })` —
-`reason` is `"empty"`, `"non_positive_weight"`, or `"duplicate_key"` (with the
-offending `key`) — for a malformed variant set.
+`reason` is `"empty"`, `"empty_key"`, `"non_positive_weight"`, or
+`"duplicate_key"` (with the offending `key` where applicable) — for a malformed
+variant set. An empty `scope` or `key` throws `INVALID_ARGUMENT`; every mutation
+rejects an empty `scope`, `key`, or (where taken) `subjectRef` the same way.
 
 ### `setStatus(ctx, key, status, scope?) → boolean`
 
@@ -133,8 +135,9 @@ returns `[]`. Measure outcomes in your own tables, joined on the variant.
 
 ## Error codes
 
-| Code                | Thrown by          | When                                                                                                                  |
-| ------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `INVALID_VARIANTS`  | `define`           | Empty variant set, a non-positive/non-finite weight, or a duplicate variant key (`reason` + `key` in the error data). |
-| `INVALID_BATCH`     | `deleteExperiment` | Batch is not an integer in 1–500.                                                                                     |
-| `EXPERIMENT_LOCKED` | `define`           | `variants` or `salt` changed after a subject was assigned. Define a new experiment key to re-randomize.               |
+| Code                | Thrown by          | When                                                                                                                                        |
+| ------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INVALID_ARGUMENT`  | every mutation     | `scope`, `key`, or `subjectRef` (where taken) is an empty string.                                                                           |
+| `INVALID_VARIANTS`  | `define`           | Empty variant set, an empty variant key, a non-positive/non-finite weight, or a duplicate variant key (`reason` + `key` in the error data). |
+| `INVALID_BATCH`     | `deleteExperiment` | Batch is not an integer in 1–500.                                                                                                           |
+| `EXPERIMENT_LOCKED` | `define`           | `variants` or `salt` changed after a subject was assigned. Define a new experiment key to re-randomize.                                     |
