@@ -51,7 +51,8 @@ key.
 `reason` is `"empty"`, `"empty_key"`, `"non_positive_weight"`, or
 `"duplicate_key"` (with the offending `key` where applicable) — for a malformed
 variant set. An empty `scope` or `key` throws `INVALID_ARGUMENT`; every mutation
-rejects an empty `scope`, `key`, or (where taken) `subjectRef` the same way.
+rejects an empty `scope`, `key`, or (where taken) `subjectRef` the same way. Re-defining an unchanged
+experiment writes nothing.
 
 ### `setStatus(ctx, key, status, scope?) → boolean`
 

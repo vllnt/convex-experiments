@@ -16,6 +16,11 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 
+- `deleteExperiment` deletes the definition in the same pass once every child table returns fewer rows
+  than `batch`, which can save the final scheduled mutation of a delete.
+- `define` and `setStatus` skip the write when nothing changed, so idempotent re-defines no longer
+  invalidate `peek`/`getExperiment`/`results` subscriptions.
+- The first `logExposure` for a subject updates its variant tally once instead of twice.
 - Clarify installation and usage documentation; retain `llms.txt` as the single
   maintained LLM index and remove the generated `llms-full.txt` bundle.
 - Adopt pnpm 10 with a seven-day release-age gate and blocked dependency install scripts; drop

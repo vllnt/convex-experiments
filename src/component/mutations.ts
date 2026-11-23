@@ -138,7 +138,6 @@ async function ensureAssignment(
     variant: variantKey,
     assignedAt: now,
   });
-  await bumpTally(ctx, experiment.scope, experiment.key, variantKey, { assigned: 1 });
   return { variant: variantKey, isNew: true };
 }
 
@@ -192,7 +191,9 @@ export const define = mutation({
       });
       return { created: true };
     }
-    if (variantsChanged(existing.variants, args.variants) || existing.salt !== args.salt) {
+    const definitionChanged =
+      variantsChanged(existing.variants, args.variants) || existing.salt !== args.salt;
+    if (definitionChanged) {
       const firstAssignment = await ctx.db
         .query("assignments")
         .withIndex("by_scope_experiment_subject", (q) =>
@@ -207,11 +208,15 @@ export const define = mutation({
         });
       }
     }
-    await ctx.db.patch("experiments", existing._id, {
-      status: args.status,
-      variants: args.variants,
-      salt: args.salt,
-    });
+    if (definitionChanged) {
+      await ctx.db.patch("experiments", existing._id, {
+        status: args.status,
+        variants: args.variants,
+        salt: args.salt,
+      });
+    } else if (existing.status !== args.status) {
+      await ctx.db.patch("experiments", existing._id, { status: args.status });
+    }
     return { created: false };
   },
 });
@@ -236,7 +241,9 @@ export const setStatus = mutation({
     if (existing === null) {
       return false;
     }
-    await ctx.db.patch("experiments", existing._id, { status: args.status });
+    if (existing.status !== args.status) {
+      await ctx.db.patch("experiments", existing._id, { status: args.status });
+    }
     return true;
   },
 });
@@ -261,7 +268,11 @@ export const assign = mutation({
     if (experiment === null || experiment.status !== "running") {
       return { variant: null };
     }
-    return ensureAssignment(ctx, experiment, args.subjectRef, Date.now());
+    const result = await ensureAssignment(ctx, experiment, args.subjectRef, Date.now());
+    if (result.isNew) {
+      await bumpTally(ctx, args.scope, args.key, result.variant, { assigned: 1 });
+    }
+    return result;
   },
 });
 
@@ -286,7 +297,7 @@ export const logExposure = mutation({
       return { variant: null };
     }
     const now = Date.now();
-    const { variant: variantKey } = await ensureAssignment(
+    const { variant: variantKey, isNew } = await ensureAssignment(
       ctx,
       experiment,
       args.subjectRef,
@@ -312,6 +323,7 @@ export const logExposure = mutation({
         count: 1,
       });
       await bumpTally(ctx, args.scope, args.key, variantKey, {
+        assigned: isNew ? 1 : 0,
         subjects: 1,
         exposures: 1,
       });
@@ -320,7 +332,10 @@ export const logExposure = mutation({
         lastExposedAt: now,
         count: existing.count + 1,
       });
-      await bumpTally(ctx, args.scope, args.key, variantKey, { exposures: 1 });
+      await bumpTally(ctx, args.scope, args.key, variantKey, {
+        assigned: isNew ? 1 : 0,
+        exposures: 1,
+      });
     }
     return { variant: variantKey };
   },
@@ -424,7 +439,11 @@ export const deleteExperiment = mutation({
       await ctx.db.delete("variantTallies", row._id);
       removed++;
     }
-    if (removed > 0) {
+    const drained =
+      assignments.length < args.batch &&
+      exposures.length < args.batch &&
+      tallies.length < args.batch;
+    if (!drained) {
       await ctx.scheduler.runAfter(0, api.mutations.deleteExperiment, {
         scope: args.scope,
         key: args.key,
