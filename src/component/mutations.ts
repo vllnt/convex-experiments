@@ -3,7 +3,7 @@ import { api } from "./_generated/api.js";
 import type { Doc } from "./_generated/dataModel.js";
 import type { MutationCtx } from "./_generated/server.js";
 import { mutation } from "./_generated/server.js";
-import { pickVariant, type Variant } from "../shared.js";
+import { MAX_ID_LENGTH, MAX_VARIANTS, pickVariant, type Variant } from "../shared.js";
 import { assignResult, experimentStatus, exposureResult, variant } from "./validators.js";
 
 /** Reject empty identifiers: an empty scope/key/subjectRef would store a meaningless row. */
@@ -13,6 +13,37 @@ function assertNonEmpty(fields: Record<string, string>): void {
       throw new ConvexError({
         code: "INVALID_ARGUMENT",
         message: `${name} must be non-empty`,
+      });
+    }
+  }
+}
+
+function assertMaxLength(fields: Record<string, string>): void {
+  for (const [name, value] of Object.entries(fields)) {
+    if (value.length > MAX_ID_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_ARGUMENT",
+        message: `${name} must be at most ${MAX_ID_LENGTH} characters`,
+      });
+    }
+  }
+}
+
+function assertDefinitionSize(variants: readonly Variant[], salt: string): void {
+  assertMaxLength({ salt });
+  if (variants.length > MAX_VARIANTS) {
+    throw new ConvexError({
+      code: "INVALID_VARIANTS",
+      reason: "too_many",
+      message: `an experiment has at most ${MAX_VARIANTS} variants`,
+    });
+  }
+  for (const candidate of variants) {
+    if (candidate.key.length > MAX_ID_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_VARIANTS",
+        reason: "key_too_long",
+        message: `variant keys must be at most ${MAX_ID_LENGTH} characters`,
       });
     }
   }
@@ -130,6 +161,7 @@ async function ensureAssignment(
   if (existing !== null) {
     return { variant: existing.variant, isNew: false };
   }
+  assertMaxLength({ subjectRef });
   const variantKey = pickVariant(experiment.variants, hashSalt(experiment), subjectRef);
   await ctx.db.insert("assignments", {
     scope: experiment.scope,
@@ -181,6 +213,8 @@ export const define = mutation({
       )
       .unique();
     if (existing === null) {
+      assertMaxLength({ scope: args.scope, key: args.key });
+      assertDefinitionSize(args.variants, args.salt);
       await ctx.db.insert("experiments", {
         key: args.key,
         scope: args.scope,
@@ -194,6 +228,7 @@ export const define = mutation({
     const definitionChanged =
       variantsChanged(existing.variants, args.variants) || existing.salt !== args.salt;
     if (definitionChanged) {
+      assertDefinitionSize(args.variants, args.salt);
       const firstAssignment = await ctx.db
         .query("assignments")
         .withIndex("by_scope_experiment_subject", (q) =>
