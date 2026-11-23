@@ -7,6 +7,44 @@ import { MAX_ID_LENGTH, MAX_VARIANTS } from "./shared.js";
 
 const modules = import.meta.glob("./component/**/*.ts");
 
+const writes = vi.hoisted((): string[] => []);
+
+vi.mock("./component/_generated/server.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./component/_generated/server.js")>();
+  const WRITE_METHODS = new Set(["insert", "patch", "replace", "delete"]);
+  function countingDb<T extends object>(db: T): T {
+    return new Proxy(db, {
+      get(target, prop, receiver) {
+        const value: unknown = Reflect.get(target, prop, receiver);
+        if (typeof value !== "function") {
+          return value;
+        }
+        return (...callArgs: unknown[]) => {
+          if (typeof prop === "string" && WRITE_METHODS.has(prop)) {
+            writes.push(`${prop}:${String(callArgs[0])}`);
+          }
+          return Reflect.apply(value, target, callArgs);
+        };
+      },
+    });
+  }
+  const mutation: typeof original.mutation = (definition) => {
+    if (typeof definition === "function") {
+      return original.mutation((ctx, args) => definition({ ...ctx, db: countingDb(ctx.db) }, args));
+    }
+    return original.mutation({
+      ...definition,
+      handler: (ctx, args) => definition.handler({ ...ctx, db: countingDb(ctx.db) }, args),
+    });
+  };
+  return { ...original, mutation };
+});
+
+function writesDuring<T>(run: () => Promise<T>): Promise<string[]> {
+  writes.length = 0;
+  return run().then(() => [...writes]);
+}
+
 const TWO_EVEN = [
   { key: "control", weight: 1 },
   { key: "treatment", weight: 1 },
@@ -111,6 +149,32 @@ describe("experiments component — write and call efficiency", () => {
     expect(tally).toMatchObject({ variant, assigned: 1, subjects: 0, exposures: 1 });
   });
 
+  test("no-op define and setStatus perform zero writes; a status change patches once", async () => {
+    const t = setup();
+    await define(t, "exp");
+    expect(await writesDuring(() => define(t, "exp"))).toEqual([]);
+    expect(
+      await writesDuring(() => t.mutation(api.mutations.setStatus, { scope: "s", key: "exp", status: "running" })),
+    ).toEqual([]);
+    expect(await writesDuring(() => define(t, "exp", "stopped"))).toEqual(["patch:experiments"]);
+    expect(
+      await writesDuring(() => t.mutation(api.mutations.setStatus, { scope: "s", key: "exp", status: "running" })),
+    ).toEqual(["patch:experiments"]);
+  });
+
+  test("first exposure writes the tally row exactly once", async () => {
+    const t = setup();
+    await define(t, "exp");
+    const first = await writesDuring(() =>
+      t.mutation(api.mutations.logExposure, { scope: "s", key: "exp", subjectRef: "u" }),
+    );
+    expect(first.sort()).toEqual(["insert:assignments", "insert:exposures", "insert:variantTallies"]);
+    const repeat = await writesDuring(() =>
+      t.mutation(api.mutations.logExposure, { scope: "s", key: "exp", subjectRef: "u" }),
+    );
+    expect(repeat.sort()).toEqual(["patch:exposures", "patch:variantTallies"]);
+  });
+
   test("re-defining an unchanged experiment and setting the same status keep the definition intact", async () => {
     const t = setup();
     await define(t, "exp");
@@ -129,10 +193,28 @@ describe("experiments component — input size limits", () => {
   const long = "x".repeat(MAX_ID_LENGTH + 1);
   const ok = "x".repeat(MAX_ID_LENGTH);
 
-  test.each(["scope", "key", "subjectRef"] as const)("assign rejects an over-long %s", async (field) => {
+  test.each(["scope", "key"] as const)("define rejects a new experiment with an over-long %s", async (field) => {
     const t = setup();
     await expect(
-      t.mutation(api.mutations.assign, { scope: "s", key: "exp", subjectRef: "u", [field]: long }),
+      t.mutation(api.mutations.define, {
+        scope: "s",
+        key: "exp",
+        salt: "exp",
+        variants: TWO_EVEN,
+        status: "running",
+        [field]: long,
+      }),
+    ).rejects.toThrow(/INVALID_ARGUMENT|at most/);
+  });
+
+  test("assign and logExposure reject a new subject with an over-long subjectRef", async () => {
+    const t = setup();
+    await define(t, "exp");
+    await expect(
+      t.mutation(api.mutations.assign, { scope: "s", key: "exp", subjectRef: long }),
+    ).rejects.toThrow(/INVALID_ARGUMENT|at most/);
+    await expect(
+      t.mutation(api.mutations.logExposure, { scope: "s", key: "exp", subjectRef: long }),
     ).rejects.toThrow(/INVALID_ARGUMENT|at most/);
   });
 
@@ -174,6 +256,96 @@ describe("experiments component — input size limits", () => {
     const variants = Array.from({ length: MAX_VARIANTS + 1 }, (_, i) => ({ key: `v${i}`, weight: 1 }));
     await expect(
       t.mutation(api.mutations.define, { scope: "s", key: "exp", salt: "exp", variants, status: "running" }),
+    ).rejects.toThrow(/too_many|at most/);
+  });
+});
+
+describe("experiments component — existing over-long data stays usable", () => {
+  const long = "y".repeat(MAX_ID_LENGTH + 1);
+  const manyVariants = Array.from({ length: MAX_VARIANTS + 1 }, (_, i) => ({ key: `v${i}`, weight: 1 }));
+
+  async function seedLegacy(t: ReturnType<typeof setup>) {
+    await t.run(async (ctx) => {
+      await ctx.db.insert("experiments", {
+        scope: long,
+        key: long,
+        status: "running",
+        variants: manyVariants,
+        salt: long,
+        createdAt: 0,
+      });
+      await ctx.db.insert("assignments", {
+        scope: long,
+        experimentKey: long,
+        subjectRef: long,
+        variant: "v0",
+        assignedAt: 0,
+      });
+      await ctx.db.insert("exposures", {
+        scope: long,
+        experimentKey: long,
+        subjectRef: long,
+        variant: "v0",
+        firstExposedAt: 0,
+        lastExposedAt: 0,
+        count: 1,
+      });
+      await ctx.db.insert("variantTallies", {
+        scope: long,
+        experimentKey: long,
+        variant: "v0",
+        assigned: 1,
+        subjects: 1,
+        exposures: 1,
+      });
+    });
+  }
+
+  test("re-define, status changes, exposure and erasure work on legacy values", async () => {
+    const t = setup();
+    await seedLegacy(t);
+    const ref = { scope: long, key: long };
+    await expect(
+      t.mutation(api.mutations.define, { ...ref, variants: manyVariants, salt: long, status: "stopped" }),
+    ).resolves.toEqual({ created: false });
+    expect(await t.mutation(api.mutations.setStatus, { ...ref, status: "running" })).toBe(true);
+    await expect(t.mutation(api.mutations.logExposure, { ...ref, subjectRef: long })).resolves.toEqual({
+      variant: "v0",
+    });
+    expect(await t.mutation(api.mutations.forgetSubject, { ...ref, subjectRef: long })).toBe(true);
+    await t.mutation(api.mutations.deleteExperiment, { ...ref, batch: 10 });
+    const left = await t.run(async (ctx) => ({
+      experiments: await ctx.db.query("experiments").collect(),
+      tallies: await ctx.db.query("variantTallies").collect(),
+    }));
+    expect(left).toEqual({ experiments: [], tallies: [] });
+  });
+
+  test("new assignments on a legacy experiment still enforce the subjectRef limit", async () => {
+    const t = setup();
+    await seedLegacy(t);
+    await expect(
+      t.mutation(api.mutations.assign, { scope: long, key: long, subjectRef: `${long}z` }),
+    ).rejects.toThrow(/at most/);
+    await expect(
+      t.mutation(api.mutations.assign, { scope: long, key: long, subjectRef: "short" }),
+    ).resolves.toMatchObject({ isNew: true });
+  });
+
+  test("changing a legacy definition must satisfy the new limits", async () => {
+    const t = setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("experiments", {
+        scope: "s",
+        key: "legacy",
+        status: "draft",
+        variants: TWO_EVEN,
+        salt: "legacy",
+        createdAt: 0,
+      });
+    });
+    await expect(
+      t.mutation(api.mutations.define, { scope: "s", key: "legacy", variants: manyVariants, salt: "legacy", status: "draft" }),
     ).rejects.toThrow(/too_many|at most/);
   });
 });
