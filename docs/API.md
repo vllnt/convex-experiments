@@ -48,10 +48,12 @@ and orphan the tallies. Re-randomize or reweight by defining a new experiment
 key.
 
 **Validation.** Throws `ConvexError({ code: "INVALID_VARIANTS", reason })` —
-`reason` is `"empty"`, `"empty_key"`, `"non_positive_weight"`, or
+`reason` is `"empty"`, `"too_many"` (more than 100 variants), `"empty_key"`, `"key_too_long"` (over 512
+characters), `"non_positive_weight"`, or
 `"duplicate_key"` (with the offending `key` where applicable) — for a malformed
 variant set. An empty `scope` or `key` throws `INVALID_ARGUMENT`; every mutation
-rejects an empty `scope`, `key`, or (where taken) `subjectRef` the same way.
+rejects an empty `scope`, `key`, or (where taken) `subjectRef` the same way, and any of
+them (or `salt`) longer than 512 characters. Re-defining an unchanged experiment writes nothing.
 
 ### `setStatus(ctx, key, status, scope?) → boolean`
 
@@ -137,7 +139,7 @@ returns `[]`. Measure outcomes in your own tables, joined on the variant.
 
 | Code                | Thrown by          | When                                                                                                                                        |
 | ------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `INVALID_ARGUMENT`  | every mutation     | `scope`, `key`, or `subjectRef` (where taken) is an empty string.                                                                           |
-| `INVALID_VARIANTS`  | `define`           | Empty variant set, an empty variant key, a non-positive/non-finite weight, or a duplicate variant key (`reason` + `key` in the error data). |
+| `INVALID_ARGUMENT`  | every mutation     | `scope`, `key`, or `subjectRef` (where taken) is an empty string, or it (or `salt`) is longer than 512 characters.                          |
+| `INVALID_VARIANTS`  | `define`           | Empty or over-100 variant set, an empty or over-512-character variant key, a non-positive/non-finite weight, or a duplicate variant key (`reason` + `key` in the error data). |
 | `INVALID_BATCH`     | `deleteExperiment` | Batch is not an integer in 1–500.                                                                                                           |
 | `EXPERIMENT_LOCKED` | `define`           | `variants` or `salt` changed after a subject was assigned. Define a new experiment key to re-randomize.                                     |
