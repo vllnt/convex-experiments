@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format is based on
 
 ## [0.1.1] - Unreleased
 
+### Added
+
+- Ship `docs/API.md`, `CHANGELOG.md` and `llms.txt` in the npm package, so coding agents can read
+  docs that match the installed version from `node_modules/@vllnt/convex-experiments/`. `llms.txt`
+  links shipped files relatively and has a "For coding agents" note and an Ecosystem line; the README
+  gains a "For coding agents" note and a "Related packages" section.
+- `pnpm test:package` (run in CI) fails when a required file is missing from the tarball, when a
+  contributor or internal file would ship, or when an `llms.txt` link does not resolve inside it.
+- `docs/API.md` documents the `./react`, `./test` and `./convex.config` entry points and the exported types.
+
 ### Fixed
 
 - Reject empty `scope`, `key`, and `subjectRef` identifiers in `define`, `setStatus`, `assign`,
@@ -28,6 +38,9 @@ All notable changes to this project are documented here. The format is based on
 - Publish `@latest` only from a `vX.Y.Z` tag on `main` (npm trusted publishing with provenance); pin all
   workflow actions and scope their permissions. No local publish scripts remain.
 - Exclude test files from the published package.
+- Publish a canary on every push to `main` that touches the package or its shipped docs, and remove the
+  repository-variable gate. The canary job still publishes under the `canary` dist-tag
+  only and never moves `latest`; the `homepage` now points at `https://oss.vllnt.com/packages/convex-experiments`.
 
 ## [0.1.0] - 2026-09-01
 

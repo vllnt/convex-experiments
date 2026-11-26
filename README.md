@@ -67,7 +67,14 @@ pnpm add @vllnt/convex-experiments
 
 Node.js >=18; required peer: `convex@^1.45.0`. React >=18 is optional. The
 default npm channel is stable; use `@vllnt/convex-experiments@canary` for the
-current prerelease surface documented here.
+current prerelease surface.
+
+## For coding agents
+
+The docs are bundled in the npm package at
+`node_modules/@vllnt/convex-experiments/docs/` and match the installed version.
+Read them before writing code. `llms.txt` at the package root indexes them, and
+the bundled `src/` holds the typed sources.
 
 ## Usage
 
@@ -227,6 +234,15 @@ Tests use the simulated `convex-test` backend (`@edge-runtime/vm`), not a real
 Convex deployment; they do not prove production concurrency or scheduler
 delivery.
 
+## Related packages
+
+- [`@vllnt/convex-flags`](https://www.npmjs.com/package/@vllnt/convex-flags) —
+  use it for release control: kill-switches, rollouts and targeting. Use this
+  package when you need a sticky, measured A/B split.
+- [`@vllnt/convex-analytics`](https://www.npmjs.com/package/@vllnt/convex-analytics)
+  — use it to track the outcome events (conversions, funnels, retention) that
+  you join on the variant this package assigns.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -236,11 +252,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 Built by [bntvllnt](https://github.com/bntvllnt) ·
 [bntvllnt.com](https://bntvllnt.com) · [X @bntvllnt](https://x.com/bntvllnt)
 
-Part of the [@vllnt](https://github.com/vllnt) Convex component fleet —
-[vllnt.com](https://vllnt.com)
-
 If this is useful, [sponsor the work](https://github.com/sponsors/bntvllnt).
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+Part of vllnt oss: https://oss.vllnt.com

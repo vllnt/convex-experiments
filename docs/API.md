@@ -1,7 +1,7 @@
 # API Reference — @vllnt/convex-experiments
 
-**Compatibility:** `convex@^1.45.0`; React >=18 is optional. This reference
-follows current `@canary`.
+**Compatibility:** `convex@^1.45.0`; React >=18 is optional. This reference is
+bundled with the package and matches the installed version.
 
 Construct the client with the mounted component and optional config:
 
@@ -98,8 +98,9 @@ maps to a person. Returns `true` if anything was deleted. Loop over
 Delete an experiment and all of its data — the definition, every assignment,
 exposure, and tally row. Bounded: removes up to `batch` rows per table per pass
 and self-reschedules until the children are drained, then deletes the
-definition. Returns the rows removed in the first pass. Idempotent and safe on
-an absent experiment.
+definition (in the first pass, when every table drains within `batch` rows).
+Returns the rows removed in the first pass; the definition row is not counted.
+Idempotent and safe on an absent experiment.
 
 ## Queries
 
@@ -112,7 +113,7 @@ The experiment definition (`key`, `scope`, `status`, `variants`, `salt`,
 
 `opts`: `{ scope?: string; status?: "draft" | "running" | "stopped" }`. Every
 experiment in the scope, optionally filtered by `status` — the discovery /
-management surface.
+management surface. Not paginated.
 
 ### `getAssignment(ctx, key, subjectRef, scope?) → { variant, assignedAt } | null`
 
@@ -133,6 +134,39 @@ exposed (the funnel denominator), total `exposures`, and the configured
 `weight`. `assigned` + `weight` let a host check sample-ratio-mismatch (observed
 vs expected split); significance is the host's to compute. An absent experiment
 returns `[]`. Measure outcomes in your own tables, joined on the variant.
+
+## Entry points and types
+
+| Import                                           | Exports                                                                                                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@vllnt/convex-experiments`                      | The `Experiments` class and the types `ExperimentsComponent`, `ExperimentsOptions`, `DefineOptions`, `ExperimentDefinition`, `ExperimentStatus`, `Variant`, `Assignment`, `AssignOutcome`, `ExposureOutcome`, `VariantResult`. |
+| `@vllnt/convex-experiments/convex.config`        | The component definition (default export), passed to `app.use(...)`.                                                                                                                 |
+| `@vllnt/convex-experiments/react`                | `useVariant`, `useAssignment`, `useExperimentResults` (below).                                                                                                                       |
+| `@vllnt/convex-experiments/test`                 | `register(t, name = "experiments")`, to mount the component in a `convex-test` instance.                                                                                             |
+| `@vllnt/convex-experiments/_generated/component` | The `ComponentApi` type (types only).                                                                                                                                                |
+
+### React hooks
+
+Each hook wraps `useQuery` over a public query reference **the host re-exports**
+from its own `convex/` folder; the component never owns the host `api`. `scope`
+is optional in the args type; whether it reaches the client call depends on the
+host wrapper, and the client `defaultScope` applies when it is omitted. `react`
+is an optional peer dependency.
+
+| Hook                                     | Wraps           | Returns                                                                          |
+| ---------------------------------------- | --------------- | -------------------------------------------------------------------------------- |
+| `useVariant(peekRef, args)`              | `peek`          | `string \| null \| undefined` (variant, not enrolled, loading)                   |
+| `useAssignment(getAssignmentRef, args)`  | `getAssignment` | `Assignment \| null \| undefined` (assignment, not enrolled, loading)             |
+| `useExperimentResults(resultsRef, args)` | `results`       | `VariantResult[] \| undefined` (tallies, loading)                                |
+
+`args` is `{ scope?: string; key: string; subjectRef: string }`, except for
+`useExperimentResults`, which takes `{ scope?: string; key: string }`.
+
+### Test helper
+
+`register(t, name = "experiments")` calls `t.registerComponent` with the
+component schema and modules. The consuming app needs `convex-test` and Vite's
+`import.meta.glob` (for example through `vitest`).
 
 ## Error codes
 
