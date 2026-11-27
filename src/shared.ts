@@ -11,6 +11,10 @@ export const DEFAULT_STATUS = "running";
 /** Default page size for a `deleteExperiment` cascade pass before it self-reschedules. */
 export const DEFAULT_DELETE_BATCH = 200;
 
+export const MAX_ID_LENGTH = 512;
+
+export const MAX_VARIANTS = 100;
+
 /** A weighted variant: an opaque variant key and its relative selection weight. */
 export interface Variant {
   /** The host's opaque variant key (e.g. `"control"`, `"treatment"`). */

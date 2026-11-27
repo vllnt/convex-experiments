@@ -34,6 +34,10 @@ All notable changes to this project are documented here. The format is based on
 - `define` and `setStatus` skip the write when nothing changed, so idempotent re-defines no longer
   invalidate `peek`/`getExperiment`/`results` subscriptions.
 - The first `logExposure` for a subject updates its variant tally once instead of twice.
+- Reject new data with identifiers (`scope`, `key`, `subjectRef`, `salt`, variant keys) longer than
+  512 characters with `INVALID_ARGUMENT` / `INVALID_VARIANTS`, and new or changed variant sets over 100
+  with `INVALID_VARIANTS` (`reason: "too_many"`). Existing experiments, assignments and exposures with
+  longer values stay readable, updatable and erasable.
 - Clarify installation and usage documentation; retain `llms.txt` as the single
   maintained LLM index and remove the generated `llms-full.txt` bundle.
 - Adopt pnpm 10 with a seven-day release-age gate and blocked dependency install scripts; drop
