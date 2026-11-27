@@ -223,7 +223,7 @@ export const define = mutation({
 
 /**
  * Move an experiment to a new lifecycle `status`. Returns `false` when no
- * experiment exists for `(scope, key)`, `true` once patched. Stopping an
+ * experiment exists for `(scope, key)`, `true` when it exists. Stopping an
  * experiment freezes enrollment (`assign` returns `{ variant: null }`) while
  * leaving recorded assignments and exposures intact.
  */

@@ -31,7 +31,7 @@ const forbidden = [
   /^scripts\//,
   /^\.github\//,
   /(^|\/)__tests__\//,
-  /\.(test|spec)\.[cm]?[jt]sx?$/,
+  /\.(test|spec)\.([cm]?[jt]sx?(\.map)?|d\.[cm]?ts)$/,
 ];
 
 const repositoryBlob =
@@ -44,7 +44,7 @@ const [pack] = JSON.parse(
   execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
     cwd: directory,
     encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
+    stdio: ["ignore", "pipe", "inherit"],
   }),
 );
 const packed = new Set(pack.files.map((file) => file.path));

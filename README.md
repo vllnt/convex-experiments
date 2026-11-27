@@ -105,14 +105,14 @@ export const view = mutation({
       "checkout_button",
       userId,
     );
-    return { variant }; // "control" | "treatment" | null (not enrolled)
+    return { variant }; // variant key (string), or null when not enrolled
   },
 });
 ```
 
 Measure the outcome in your own table, joined on the assigned variant — then
 read tallies with `results(ctx, "checkout_button")`. See
-[`example/convex/example.ts`](example/convex/example.ts) for a host-side
+[`example/convex/example.ts`](https://github.com/vllnt/convex-experiments/blob/main/example/convex/example.ts) for a host-side
 conversion recorder.
 
 The wrapper is illustrative, not an auth gate: resolve and authorize the subject
@@ -245,7 +245,7 @@ delivery.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/vllnt/convex-experiments/blob/main/CONTRIBUTING.md).
 
 ## Author
 

@@ -58,8 +58,8 @@ experiment writes nothing.
 
 Move an experiment to a new lifecycle `status` (`draft` | `running` |
 `stopped`). Returns `false` when no experiment exists for `(scope, key)`, `true`
-once patched. Stopping freezes new enrollment while leaving recorded
-assignments, exposures, and tallies intact.
+when it exists (a status that is already set writes nothing). Stopping freezes
+new enrollment while leaving recorded assignments, exposures, and tallies intact.
 
 ### `assign(ctx, key, subjectRef, scope?) → AssignOutcome`
 
@@ -98,7 +98,7 @@ maps to a person. Returns `true` if anything was deleted. Loop over
 Delete an experiment and all of its data — the definition, every assignment,
 exposure, and tally row. Bounded: removes up to `batch` rows per table per pass
 and self-reschedules until the children are drained, then deletes the
-definition (in the first pass, when every table drains within `batch` rows).
+definition (in the same pass, once every table returns fewer than `batch` rows).
 Returns the rows removed in the first pass; the definition row is not counted.
 Idempotent and safe on an absent experiment.
 

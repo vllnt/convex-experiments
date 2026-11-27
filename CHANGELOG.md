@@ -18,6 +18,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- Correct shipped doc comments: `results` returns a zeroed row per defined variant (not `[]`) for an
+  experiment with no enrollment, `weight` is never `0`, and `setStatus` returns `true` whenever the
+  experiment exists.
 - Reject empty `scope`, `key`, and `subjectRef` identifiers in `define`, `setStatus`, `assign`,
   `logExposure`, `forgetSubject`, and `deleteExperiment` with `ConvexError({ code: "INVALID_ARGUMENT" })`,
   and an empty variant key in `define` with `INVALID_VARIANTS` (`reason: "empty_key"`).
