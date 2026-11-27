@@ -19,29 +19,37 @@ Time is server-sourced. The component assigns + counts exposure; the host owns r
 experiment/variant meaning, the opaque `subjectRef`, statistical significance, and the outcome metric
 (measured in the host's own tables, joined on the variant).
 
-The README/API follow current `@canary`. Client defaults are `defaultScope:
-"global"` and `defaultStatus: "running"` (define enrolls immediately unless
-configured otherwise). Salt defaults to the experiment key; bucketing hashes
-`${scope}:${salt}:${subjectRef}` and depends on ordered variants/weights.
+Client defaults are `defaultScope: "global"` and `defaultStatus: "running"` (define
+enrolls immediately unless configured otherwise). Salt defaults to the experiment key;
+bucketing hashes `${scope}:${salt}:${subjectRef}` and depends on ordered variants/weights.
 Exposure rows are per-subject, but repeated calls increment total exposures.
 Delete batches default to 200 per table, must be integers 1–500, and return only
 the current pass count. Named mounts isolate state; scopes are not authorization.
 
+## For coding agents
+
+The docs are bundled in the npm package at `node_modules/@vllnt/convex-experiments/docs/`
+and match the installed version. Read them, and the bundled `src/`, before writing code.
+
 ## Docs
 
-- [README](README.md): Project overview, installation, usage examples, architecture
-- [API Reference](docs/API.md): Public class methods, return shapes, input validation, error codes
-- [Changelog](CHANGELOG.md): Version history and release notes
-- [Contributing](CONTRIBUTING.md): Development setup, validation commands, release workflow
+- [README](./README.md): Project overview, installation, usage examples, React hooks
+- [API Reference](./docs/API.md): Client methods, return shapes, input validation, error codes, entry points
+- [Changelog](./CHANGELOG.md): Version history and release notes
+- [License](./LICENSE): MIT license
 
-## Examples
+## Source (bundled)
 
-- [Example component wrapper](example/convex/example.ts): Host-app wrapper functions
-- [Example tests](example/convex/example.test.ts): End-to-end usage coverage with `convex-test`
+- [Client](./src/client/index.ts): The `Experiments` class
+- [Types](./src/client/types.ts): Public TypeScript interfaces
+- [React hooks](./src/react/index.tsx): `useVariant`, `useAssignment`, `useExperimentResults`
+- [Test helper](./src/test.ts): `register` for `convex-test`
 
-## Optional
+## Examples (repository only, not bundled; `main` may be newer than the installed version)
 
-- [AGENTS](AGENTS.md): Canonical agent instructions for this repository
-- [Security Policy](SECURITY.md): Vulnerability reporting policy
-- [Code of Conduct](CODE_OF_CONDUCT.md): Community participation guidelines
-- [License](LICENSE): MIT license
+- [Example component wrapper](https://github.com/vllnt/convex-experiments/blob/main/example/convex/example.ts): Host-side conversion recorder
+- [Example tests](https://github.com/vllnt/convex-experiments/blob/main/example/convex/example.test.ts): Usage coverage with `convex-test`
+
+## Ecosystem
+
+- [vllnt oss](https://oss.vllnt.com/llms.txt): Index of the other `@vllnt` packages

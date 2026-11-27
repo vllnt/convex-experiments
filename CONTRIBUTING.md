@@ -49,8 +49,9 @@ at least one adversarial test (invalid input, not-enrolled, boundary).
 Maintainers only. Every publish runs in `.github/workflows/publish.yml` with npm trusted
 publishing and provenance; nothing is published from a local machine.
 
-- Canary (`@canary`): pushes to `main` publish one when the `CANARY_ENABLED` repository
-  variable is `true`; otherwise run the workflow manually on `main`.
+- Canary (`@canary`): every push to `main` that touches the package or its shipped docs
+  publishes one under the `canary` dist-tag, which never moves `latest`. The workflow can
+  also be run manually on `main`.
 - Stable (`@latest`): merge a PR that sets `package.json` `version` and adds a matching
   `## [X.Y.Z]` entry to `CHANGELOG.md`, then push the tag `vX.Y.Z` on that `main` commit.
 

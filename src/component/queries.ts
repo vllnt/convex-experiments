@@ -125,7 +125,8 @@ export const peek = query({
  * Per-variant tallies for an experiment — `assigned`, distinct `subjects` exposed,
  * total `exposures`, and the configured `weight` (for sample-ratio-mismatch).
  * Reads the maintained `variantTallies` rows (O(variants)), never scanning the
- * exposure table. An experiment with no enrollment returns an empty array.
+ * exposure table. An absent experiment returns `[]`; a defined one returns a
+ * row per variant, zeroed until subjects enroll.
  */
 export const results = query({
   args: { scope: v.string(), key: v.string() },

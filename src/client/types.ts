@@ -73,6 +73,6 @@ export interface VariantResult {
   subjects: number;
   /** Total exposure events recorded for this variant. */
   exposures: number;
-  /** The configured weight from the current definition (0 if the variant is gone). */
+  /** The configured weight from the current definition. */
   weight: number;
 }
