@@ -274,7 +274,7 @@ export class Experiments {
   ): Promise<ExperimentDefinition[]> {
     return ctx.runQuery(this.component.queries.listExperiments, {
       scope: this.scopeOf(opts.scope),
-      status: opts.status,
+      ...(opts.status === undefined ? {} : { status: opts.status }),
     });
   }
 
