@@ -8,6 +8,9 @@ override what you may have learned about Convex from training data.
 Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
 <!-- convex-ai-end -->
 
+`example/convex/_generated/ai/guidelines.md` is generated and gitignored, so a fresh clone does not
+have it: run `npx convex ai-files install` first if it is missing.
+
 # @vllnt/convex-experiments
 
 Deterministic A/B testing for Convex: sticky weighted variant assignment, deduped exposure tracking

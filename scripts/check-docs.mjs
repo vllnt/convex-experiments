@@ -293,6 +293,18 @@ for (const block of allBlocks) {
       `${block.file}:${block.line} code block tag "${block.lang}" is not allowed; use one of ${[...LANGUAGES].join(", ")}`,
     );
 }
+// A TypeScript example tagged anything but `ts`/`tsx` (e.g. `text`) would skip
+// the type-check, so a block that looks like TypeScript must carry one of them.
+const looksLikeTypeScript = (code) =>
+  /^\/\/ \S+\.(ts|tsx|mts)$/.test(code.split("\n")[0] ?? "") ||
+  /^\s*import\b[^\n]*\bfrom\s+["']/m.test(code) ||
+  /^\s*export\s+(const|function|default)\b/m.test(code);
+for (const block of allBlocks) {
+  if (!/^tsx?$/.test(block.lang) && looksLikeTypeScript(block.code))
+    fail(
+      `${block.file}:${block.line} code block looks like TypeScript but is tagged "${block.lang}"; tag it ts or tsx so it is type-checked`,
+    );
+}
 const examples = allBlocks.filter(
   (b) =>
     (b.file === "README.md" || b.file === "docs/API.md") &&
@@ -472,6 +484,8 @@ const sources = tracked.filter(
 // never count) must be `throw new X(...)` whose code, reason and message the
 // README errors table documents. A throw the table cannot document goes in
 // ALLOW, keyed by "<file>: <throw text, whitespace collapsed>", with a reason.
+// Limit: errors raised without a `throw` statement (for example
+// `Promise.reject(new ConvexError(...))`) are not detected; src/ has none today.
 /** @type {Map<string, string>} */
 const ALLOW = new Map([]);
 const documented = errorCells.flatMap((cell) =>

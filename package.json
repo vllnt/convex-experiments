@@ -104,7 +104,7 @@
     "url": "https://github.com/vllnt/convex-experiments"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"

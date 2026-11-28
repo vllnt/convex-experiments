@@ -258,8 +258,7 @@ export class Experiments {
    * Read-only deterministic variant for a subject — the sticky variant **without
    * persisting**. Returns the stored assignment if present, else the deterministic
    * pick; `null` when the experiment is absent or not `running`. Use for SSR / a
-   * flicker-free first paint, then
-   * call `logExposure` to enroll + tally.
+   * flicker-free first paint, then call `logExposure` to enroll + tally.
    */
   peek(
     ctx: RunQueryCtx,

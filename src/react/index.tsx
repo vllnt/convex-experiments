@@ -9,8 +9,9 @@
  * NO-LEAK CONTRACT: these hooks expose only non-secret experiment data — the
  * subject's own variant key, their assignment, and aggregate per-variant tallies.
  * There is no secret or cross-subject payload. `useVariant` reads the deterministic
- * `peek` query, so it paints the correct variant on first render (no flash of
- * control); call the `logExposure` mutation to enroll + tally.
+ * `peek` query, which gives a first paint without a flash of the control (it
+ * returns `undefined` while loading); call the `logExposure` mutation to enroll +
+ * tally.
  */
 
 import type { FunctionReference } from "convex/server";

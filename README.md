@@ -211,8 +211,9 @@ export const recordPurchase = mutation({
 });
 ```
 
-Paint the right variant on first render in React. The hooks take a query
-reference that you export from your own `convex/` folder:
+Get a first paint without a flash of the control in React (`useVariant` returns
+`undefined` while loading). The hooks take a query reference that you export
+from your own `convex/` folder:
 
 ```ts
 // convex/experiments.ts
@@ -400,7 +401,9 @@ other errors of its own: absent experiments and wrong scopes return `null`,
 - `react >=18` is an optional peer dependency, needed only for
   `@vllnt/convex-experiments/react` (which also imports `convex/react`). A
   backend-only app needs no React.
-- Node.js `>=18`. ES modules only.
+- Node.js `>=20` (`engines.node`), matching the oldest supported `convex` peer
+  (1.45). The `convex` version you install may need a newer Node: 1.51 needs
+  `>=22`. Check with `npm view convex@1.51.0 engines`. ES modules only.
 - `@vllnt/convex-experiments/test` ships as TypeScript source (`src/test.ts`) and
   needs `convex-test` and Vite's `import.meta.glob`, for example through
   `vitest`, with `vite/client` types.

@@ -4,7 +4,7 @@
 
 Install `@vllnt/convex-experiments` (unreleased builds from `main` use the `canary`
 dist-tag). Peer dependency `convex@^1.45.0`; optional peer `react >=18` for the
-`./react` hooks; Node.js `>=18`. Mount it with `app.use(experiments)` from
+`./react` hooks; Node.js `>=20` (`convex` 1.51 needs `>=22`). Mount it with `app.use(experiments)` from
 `@vllnt/convex-experiments/convex.config` and call it through
 `new Experiments(components.experiments)` from host mutations and queries.
 Mutations: `define`, `setStatus`, `assign`, `logExposure`, `forgetSubject`,

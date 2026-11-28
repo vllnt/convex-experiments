@@ -33,6 +33,8 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 
+- `engines.node` is now `>=20`, matching the oldest supported `convex` peer (1.45 requires Node
+  >=20; 1.51 requires >=22).
 - Rework the README for coding agents (fixed section order, type-checked examples, an errors table
   and a limits list), rewrite `docs/API.md` with one heading per export, refresh `llms.txt`, add
   TSDoc to every public export, and set the `description` and `keywords` to match the code.

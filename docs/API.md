@@ -1,6 +1,7 @@
 # API Reference — @vllnt/convex-experiments
 
-**Compatibility:** `convex@^1.45.0`; React >=18 is optional. This reference is
+**Compatibility:** `convex@^1.45.0`; Node.js >=20 (`engines.node`; the installed
+`convex` may need newer, 1.51 needs >=22); React >=18 is optional. This reference is
 bundled with the package and matches the installed version.
 
 ## Entry points
