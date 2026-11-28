@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.1] - Unreleased
+## [0.2.0] - Unreleased
 
 ### Added
 
@@ -21,9 +21,11 @@ All notable changes to this project are documented here. The format is based on
 - Correct shipped doc comments: `results` returns a zeroed row per defined variant (not `[]`) for an
   experiment with no enrollment, `weight` is never `0`, and `setStatus` returns `true` whenever the
   experiment exists.
-- Reject empty `scope`, `key`, and `subjectRef` identifiers in `define`, `setStatus`, `assign`,
-  `logExposure`, `forgetSubject`, and `deleteExperiment` with `ConvexError({ code: "INVALID_ARGUMENT" })`,
-  and an empty variant key in `define` with `INVALID_VARIANTS` (`reason: "empty_key"`).
+- **Breaking:** Reject empty `scope`, `key`, and `subjectRef` identifiers in `define`, `setStatus`,
+  `assign`, `logExposure`, `forgetSubject`, and `deleteExperiment` with
+  `ConvexError({ code: "INVALID_ARGUMENT" })`, and an empty variant key in `define` with
+  `INVALID_VARIANTS` (`reason: "empty_key"`). Callers passing an empty `scope`, `key`, `subjectRef`
+  or variant key now get a `ConvexError` instead of success.
 - Make the `/test` entry type-check for consumers using `moduleResolution: nodenext`: relative imports
   in `src/` use explicit `.js` extensions and `src/test.ts` references `vite/client` types.
 - `register()` from `/test` accepts a host app's `convexTest(hostSchema, modules)` instance. It was
