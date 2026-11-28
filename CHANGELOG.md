@@ -26,6 +26,8 @@ All notable changes to this project are documented here. The format is based on
   and an empty variant key in `define` with `INVALID_VARIANTS` (`reason: "empty_key"`).
 - Make the `/test` entry type-check for consumers using `moduleResolution: nodenext`: relative imports
   in `src/` use explicit `.js` extensions and `src/test.ts` references `vite/client` types.
+- `register()` from `/test` accepts a host app's `convexTest(hostSchema, modules)` instance. It was
+  typed against the component's own schema, so any host schema with other tables failed with TS2345.
 
 ### Changed
 
