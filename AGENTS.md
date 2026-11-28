@@ -1,15 +1,22 @@
 <!-- convex-ai-start -->
+
 This project uses [Convex](https://convex.dev) as its backend.
 
-When working on Convex code, **always read `example/convex/_generated/ai/guidelines.md` first** for
-important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that
+When working on Convex code, **always read
+`example/convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
 override what you may have learned about Convex from training data.
 
-Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
 <!-- convex-ai-end -->
 
-`example/convex/_generated/ai/guidelines.md` is generated and gitignored, so a fresh clone does not
-have it: run `npx convex ai-files install` first if it is missing.
+`example/convex/_generated/ai/guidelines.md` is generated and not committed, so a fresh clone does
+not have it: create it with `npx convex ai-files install` (in this repo:
+`pnpm exec convex ai-files install`). That command also creates `CLAUDE.md` and a `.claude/` folder,
+which this repo does not allow (`pnpm lint` fails while either exists), so delete both afterwards and
+keep `AGENTS.md` as committed.
 
 # @vllnt/convex-experiments
 
