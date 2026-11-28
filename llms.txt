@@ -11,10 +11,13 @@ Mutations: `define`, `setStatus`, `assign`, `logExposure`, `forgetSubject`,
 `deleteExperiment`. Queries: `getExperiment`, `listExperiments`,
 `getAssignment`, `peek`, `results`. Lifecycle: `draft` -> `running` ->
 `stopped`; only `running` enrolls, and `assign`/`logExposure`/`peek` return
-`{ variant: null }` otherwise (also for an absent experiment). A variant is
-FNV-1a of `${scope}:${salt}:${subjectRef}` on the ordered cumulative-weight line;
-`salt` defaults to the key. `variants` and `salt` are immutable once a subject is
-assigned (`EXPERIMENT_LOCKED`); define a new key to re-randomize. Every
+`{ variant: null }` otherwise (also for an absent experiment). A variant is a
+32-bit FNV-1a hash over the UTF-16 code units of `${scope}:${salt}:${subjectRef}`
+on the ordered cumulative-weight line; `salt` defaults to the key. `variants`
+and `salt` are immutable once a subject is assigned (`EXPERIMENT_LOCKED`); define
+a new key to re-randomize. Re-running `define` without `status` resets the status
+to the client `defaultStatus` (restarting a stopped experiment). Queries do not
+reject empty identifiers (`peek` with `subjectRef: ""` returns a variant). Every
 `logExposure` adds 1 to `exposures` (no idempotency key); `subjects` counts each
 subject once. `results` reads maintained per-variant tallies (`assigned`,
 `subjects`, `exposures`, `weight`) in O(variants). Client defaults:

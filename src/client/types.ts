@@ -52,8 +52,8 @@ export interface Assignment {
 }
 
 /**
- * Outcome of {@link Experiments.assign}. `{ variant: null }` — not enrolled
- * (experiment absent or not running). `{ variant, isNew }` — the enrolled variant,
+ * Outcome of {@link Experiments.assign}. `{ variant: null }` — the experiment is
+ * absent or not `running`, so nothing is written. `{ variant, isNew }` — the enrolled variant,
  * with `isNew` true only on the call that first persisted the assignment.
  */
 export type AssignOutcome =

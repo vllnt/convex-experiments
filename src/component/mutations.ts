@@ -280,7 +280,7 @@ export const assign = mutation({
  * Record that `subjectRef` was exposed and return their variant, enrolling if
  * needed. First exposure inserts a tally row and bumps `subjects` + `exposures`;
  * later exposures bump `exposures` only (deduped per subject). `{ variant: null }`
- * when not enrolled. Time is server-sourced.
+ * when the experiment is absent or not `running`. Time is server-sourced.
  */
 export const logExposure = mutation({
   args: { scope: v.string(), key: v.string(), subjectRef: v.string() },

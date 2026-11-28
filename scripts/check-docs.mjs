@@ -8,9 +8,9 @@ import ts from "typescript";
 // Agent-first docs check, run by `pnpm test:package` (CI Build job, after
 // `pnpm build`). Fails when the README loses a required section or its order,
 // the install command or first example moves below line 40, a code block has no
-// language or a `...` gap, a relative link or anchor breaks, a public export
-// lacks TSDoc or a README API row, an error code, reason or message is missing
-// from "Errors and fixes", a README or docs/API.md TypeScript example stops
+// or a non-allowlisted language tag or a `...` gap, a relative link or anchor
+// breaks, a public export lacks TSDoc, a README API row or a docs/API.md
+// heading, a `throw` in src/ is not documented in "Errors and fixes", a README or docs/API.md TypeScript example stops
 // type-checking against the built package (dist/), or the shared vllnt blocks
 // (README Links and footer, llms.txt Ecosystem) drift. It also fails when a
 // shipped or tracked file mentions the retired vllnt domain.
@@ -153,12 +153,13 @@ if (avoidBullets < 1 || avoidBullets > 3)
     `README "When to use" needs 1 to 3 "- Do not use it when" bullets (has ${avoidBullets})`,
   );
 
-const installLine =
-  readmeLines.findIndex((l) =>
-    new RegExp(
-      `^(npm|pnpm|yarn|bun) (install|add) ${pkg.name.replace("/", "\\/")}`,
-    ).test(l),
-  ) + 1;
+const escapeRe = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// The package name must end the token (optionally `@<version>`), so
+// `pnpm add @vllnt/convex-experiments-foo` does not count.
+const installPattern = new RegExp(
+  `^(npm|pnpm|yarn|bun) (install|add) ${escapeRe(pkg.name)}(@[\\w.-]+)?$`,
+);
+const installLine = readmeLines.findIndex((l) => installPattern.test(l)) + 1;
 if (installLine === 0 || installLine > 40)
   fail(
     `README install command must be within lines 1-40 (line ${installLine || "none"})`,
@@ -279,10 +280,18 @@ for (const name of used)
     fail(`README "## Related packages" must link ${name} to its package page`);
 
 // ── Code blocks ──────────────────────────────────────────────────────────────
+// Only these tags are allowed. `ts` and `tsx` blocks are type-checked below, so
+// any other TypeScript spelling (`typescript`, `mts`, ...) is rejected rather
+// than silently skipped.
+const LANGUAGES = new Set(["bash", "ts", "tsx", "json", "text"]);
 const allBlocks = DOCS.flatMap((file) => codeBlocks(read(file), file));
 for (const block of allBlocks) {
   if (!block.lang)
     fail(`${block.file}:${block.line} code block has no language tag`);
+  else if (!LANGUAGES.has(block.lang))
+    fail(
+      `${block.file}:${block.line} code block tag "${block.lang}" is not allowed; use one of ${[...LANGUAGES].join(", ")}`,
+    );
 }
 const examples = allBlocks.filter(
   (b) =>
@@ -401,9 +410,14 @@ imports.forEach((statement, i) => {
         : l.includes(`[\`${name}\`]`) &&
           (i === 0 || l.includes(`\`${entry}\``)),
     );
+    // One docs/API.md heading per export; the default export is named after
+    // its entry subpath (`convex.config` -> `#convexconfig`).
+    const anchor = slug(name === "default" ? entry.split("/").at(-1) : name);
+    if (!apiAnchors.has(anchor))
+      fail(`docs/API.md has no heading for ${label} (expected #${anchor})`);
     if (!row) fail(`README "## API" table has no row for ${label}`);
-    else if (rowLinks(row).length === 0)
-      fail(`README "## API" row for ${label} must link into docs/API.md`);
+    else if (!rowLinks(row).includes(anchor))
+      fail(`README "## API" row for ${label} must link docs/API.md#${anchor}`);
     if (!(symbol.flags & ts.SymbolFlags.Class)) continue;
     const ctor = symbol.members?.get("__constructor");
     if (!ctor || !hasDoc(ctor))
@@ -419,6 +433,10 @@ imports.forEach((statement, i) => {
       if (hidden || !(member.flags & ts.SymbolFlags.Method)) continue;
       const method = member.getName();
       if (!hasDoc(member)) fail(`TSDoc summary missing: ${name}.${method}`);
+      if (!apiAnchors.has(slug(method)))
+        fail(
+          `docs/API.md has no heading for ${name}.${method} (expected #${slug(method)})`,
+        );
       const methodRow = apiTable.find((l) => l.includes(`[\`${method}(`));
       if (!methodRow)
         fail(`README "## API" table has no row for ${name}.${method}`);
@@ -450,35 +468,99 @@ const sources = tracked.filter(
     !/\.test\.tsx?$/.test(f) &&
     !/\/_generated\//.test(f),
 );
-let thrown = 0;
-for (const file of sources) {
-  const text = read(file);
-  for (const [, code] of text.matchAll(/\bcode:\s*"([A-Z][A-Z0-9_]+)"/g)) {
-    thrown++;
-    if (!errorCells.some((c) => c.includes(`\`${code}\``)))
-      fail(`README "## Errors and fixes" does not list ${code} (${file})`);
-    if (!referenceErrors.includes(`\`${code}\``))
-      fail(`docs/API.md "## Error codes" does not list ${code} (${file})`);
+// Every `throw` statement in src/ (from the AST, so comments and `@throws` tags
+// never count) must be `throw new X(...)` whose code, reason and message the
+// README errors table documents. A throw the table cannot document goes in
+// ALLOW, keyed by "<file>: <throw text, whitespace collapsed>", with a reason.
+/** @type {Map<string, string>} */
+const ALLOW = new Map([]);
+const documented = errorCells.flatMap((cell) =>
+  [...cell.matchAll(/`([^`]+)`/g)].map((m) => m[1]),
+);
+/** A string literal as itself; a template literal as a regex with `.+` per `${}`; else undefined. */
+function literalOf(node) {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    return { text: node.text, re: new RegExp(`^${escapeRe(node.text)}$`) };
+  if (ts.isTemplateExpression(node)) {
+    const pattern = node.templateSpans.reduce(
+      (out, span) => `${out}.+${escapeRe(span.literal.text)}`,
+      escapeRe(node.head.text),
+    );
+    return { text: node.getText(), re: new RegExp(`^${pattern}$`) };
   }
-  for (const [, reason] of text.matchAll(/\breason:\s*"([a-z_]+)"/g)) {
-    thrown++;
-    if (!errorCells.some((c) => c.includes(`reason: "${reason}"`)))
-      fail(
-        `README "## Errors and fixes" does not list reason: "${reason}" (${file})`,
-      );
-  }
-  for (const [, message] of text.matchAll(
-    /(?:\bmessage:\s*|new Error\()\s*"([^"]+)"/g,
-  )) {
-    thrown++;
-    if (!errorCells.some((c) => c.includes(`\`${message}\``)))
-      fail(
-        `README "## Errors and fixes" does not list the message "${message}" (${file})`,
-      );
-  }
+  return undefined;
 }
-if (thrown === 0)
-  fail("found no thrown error codes in src/; update the pattern");
+const throws = [];
+for (const file of sources) {
+  const source = ts.createSourceFile(
+    file,
+    read(file),
+    ts.ScriptTarget.ES2022,
+    true,
+  );
+  const visit = (node) => {
+    if (ts.isThrowStatement(node)) throws.push({ file, node, source });
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+}
+for (const { file, node, source } of throws) {
+  const key = `${file}: ${node.getText(source).replace(/\s+/g, " ")}`;
+  if (ALLOW.has(key)) continue;
+  const problems = [];
+  const expression = node.expression;
+  const [arg] =
+    expression && ts.isNewExpression(expression)
+      ? (expression.arguments ?? [])
+      : [];
+  if (!arg) {
+    problems.push("throws something other than `new X(<message or data>)`");
+  } else if (ts.isObjectLiteralExpression(arg)) {
+    const fields = Object.fromEntries(
+      arg.properties
+        .filter(ts.isPropertyAssignment)
+        .map((p) => [p.name.getText(source), p.initializer]),
+    );
+    const code = fields.code && literalOf(fields.code);
+    const reason = fields.reason && literalOf(fields.reason);
+    const message = fields.message && literalOf(fields.message);
+    if (!code) problems.push("has no literal `code`");
+    else {
+      if (!documented.includes(code.text))
+        problems.push(
+          `code ${code.text} is not in README "## Errors and fixes"`,
+        );
+      if (!referenceErrors.includes(`\`${code.text}\``))
+        problems.push(
+          `code ${code.text} is not in docs/API.md "## Error codes"`,
+        );
+    }
+    if (fields.reason && !reason) problems.push("has a non-literal `reason`");
+    if (reason && !documented.includes(`reason: "${reason.text}"`))
+      problems.push(
+        `reason: "${reason.text}" is not in README "## Errors and fixes"`,
+      );
+    if (!message) problems.push("has no literal or template `message`");
+    else if (!documented.some((d) => message.re.test(d)))
+      problems.push(
+        `message ${message.text} is not in README "## Errors and fixes"`,
+      );
+  } else {
+    const message = literalOf(arg);
+    if (!message)
+      problems.push("has a message that is not a literal or template");
+    else if (!documented.some((d) => message.re.test(d)))
+      problems.push(
+        `message ${message.text} is not in README "## Errors and fixes"`,
+      );
+  }
+  for (const problem of problems)
+    fail(
+      `${key.slice(0, 160)}: ${problem} (document it, or add it to ALLOW with a reason)`,
+    );
+}
+if (throws.length === 0) fail("found no throw statements in src/");
+const thrown = throws.length;
 
 // ── README and docs/API.md examples type-check against dist/ ─────────────────
 // Examples are placed at their `// <path>` inside a virtual host app; `convex/_generated`
@@ -580,5 +662,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `OK    docs: ${SECTIONS.length} README sections in order, ${allBlocks.length} code blocks tagged, ${placed.length} examples type-check against dist/, ${thrown} error codes, reasons and messages documented`,
+  `OK    docs: ${SECTIONS.length} README sections in order, ${allBlocks.length} code blocks tagged, ${placed.length} examples type-check against dist/, ${thrown} throw statements in src/ documented`,
 );

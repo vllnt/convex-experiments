@@ -19,8 +19,8 @@ import type { Assignment, VariantResult } from "../client/types.js";
 
 /**
  * Reactive, flicker-free variant for a subject — wraps the host's re-exported
- * `peek` query (deterministic, read-only). Returns the variant key, `null` when not
- * enrolled, or `undefined` while the query loads.
+ * `peek` query (deterministic, read-only). Returns the variant key, `null` when the
+ * experiment is absent or not `running`, or `undefined` while the query loads.
  */
 export function useVariant(
   peekRef: FunctionReference<

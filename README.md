@@ -83,7 +83,9 @@ export const checkoutVariant = mutation({
 ```
 
 Run `npx convex dev` once to generate `components.experiments`, then
-`npx convex run checkout:setup`. `checkoutVariant` enrolls the caller on first
+`npx convex run checkout:setup` once. Re-running `setup` is not a no-op after
+you stop the experiment: it sets the status back to `running` (see Limits and
+gotchas). `checkoutVariant` enrolls the caller on first
 call and returns the same variant afterwards. It returns `null` when the
 experiment is absent, `draft` or `stopped`: render your control. The component
 never reads auth; the host derives `subjectRef` (here the user's
@@ -352,15 +354,20 @@ other errors of its own: absent experiments and wrong scopes return `null`,
   `stopped`, and also for a misspelled key or a wrong scope.
 - `define` starts the experiment as `running` unless you pass `status: "draft"`
   or construct the client with `defaultStatus: "draft"`.
+- Re-running `define` without `status` resets the status: the client sends
+  `status: opts.status ?? defaultStatus` and the update writes it, so a
+  `stopped` experiment starts enrolling again. Pass `status` explicitly when you
+  re-run `define`, and use `setStatus` for lifecycle changes.
 - After `stopped`, `getAssignment` still returns stored assignments, while
   `assign`, `logExposure` and `peek` return `{ variant: null }`.
 - `variants` (keys, weights and their order) and `salt` cannot change once any
   subject in that `(scope, key)` has an assignment (`EXPERIMENT_LOCKED`).
   Re-defining with identical input writes nothing and returns `{ created: false }`.
 - The variant is computed from `scope`, `salt` (default: the experiment key),
-  `subjectRef` and the ordered variants and weights, with the 32-bit FNV-1a
-  hash. It is deterministic bucketing, not randomness or a secret: anyone who
-  knows those inputs can compute a subject's variant.
+  `subjectRef` and the ordered variants and weights, with a 32-bit FNV-1a hash
+  over the UTF-16 code units (`charCodeAt`) of `"<scope>:<salt>:<subjectRef>"`,
+  not its UTF-8 bytes. It is deterministic bucketing, not randomness or a
+  secret: anyone who knows those inputs can compute a subject's variant.
 - Every `logExposure` call adds 1 to `exposures`; there is no idempotency key, so
   a retried call counts again. `subjects` counts each subject once. `assign`
   alone adds to `assigned`, not to `subjects` or `exposures`.
@@ -375,6 +382,9 @@ other errors of its own: absent experiments and wrong scopes return `null`,
   `defaultScope` (`"global"`), never all scopes.
 - `results` returns `[]` for an absent experiment and one zeroed row per defined
   variant before anyone enrolls.
+- Only mutations reject empty `scope`, `key` and `subjectRef` (`INVALID_ARGUMENT`).
+  Queries do not validate them: `peek(ctx, key, "")` on a `running` experiment
+  returns a real variant, the deterministic pick for the empty string.
 - The component sets no maximum length for keys, scopes or `subjectRef`.
 - Scopes are namespaces, not authorization. The component reads no auth.
 - Timestamps (`createdAt`, `assignedAt`) are server time in ms; no method accepts

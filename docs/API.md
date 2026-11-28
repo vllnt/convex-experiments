@@ -44,9 +44,11 @@ weights, statuses and `subjectRef` are concrete typed values; there is no
 generic to narrow.
 
 **Assignment is deterministic.** A subject's variant is
-`pickVariant(variants, "<scope>:<salt>", subjectRef)`: the 32-bit FNV-1a hash of
-`"<scope>:<salt>:<subjectRef>"` mapped onto the cumulative-weight line of the
-experiment's variants, in their defined order. The same subject always lands in
+`pickVariant(variants, "<scope>:<salt>", subjectRef)` (an internal function in
+`src/shared.ts`, not exported by any entry point): a 32-bit FNV-1a hash of
+`"<scope>:<salt>:<subjectRef>"`, computed over its UTF-16 code units
+(`charCodeAt`) rather than UTF-8 bytes, mapped onto the cumulative-weight line of
+the experiment's variants, in their defined order. The same subject always lands in
 the same weighted bucket, and `scope` is part of the input, so one `subjectRef`
 buckets independently in each scope. `salt` defaults to the experiment key and
 is fixed once a subject is assigned (see [`define`](#define)).
@@ -56,8 +58,11 @@ are read from the server clock inside each handler; no method accepts a
 caller-supplied timestamp.
 
 **Empty identifiers.** Every mutation throws `INVALID_ARGUMENT` for an empty
-`scope`, `key` or (where taken) `subjectRef`. Queries do not check: they return
-`null`, `{ variant: null }` or `[]`.
+`scope`, `key` or (where taken) `subjectRef`. Queries do not validate empty
+identifiers. An empty `scope` or `key` finds no experiment, because mutations
+never store one, so the query returns `null`, `{ variant: null }` or `[]`. An
+empty `subjectRef` is different: `peek(ctx, key, "")` on a `running` experiment
+returns a real variant (the deterministic pick for the empty string).
 
 ### `define`
 
@@ -72,6 +77,13 @@ Create or update an experiment, keyed by `(scope, key)`. Each variant's share is
 starts at once). Returns `{ created: true }` on insert and `{ created: false }`
 on update. Re-defining with unchanged `variants`, `salt` and `status` writes
 nothing.
+
+**Re-running `define` resets `status`.** The client always sends
+`status: opts.status ?? defaultStatus`, and the update path writes that status.
+So calling `define` again without `status` on a `stopped` (or `draft`)
+experiment sets it back to the client `defaultStatus` (`"running"` by default)
+and restarts enrollment. Pass `status` explicitly when re-running `define`, or
+use [`setStatus`](#setstatus) for lifecycle changes.
 
 **Immutable once assigned.** A `status` change is always allowed. Changing
 `variants` (keys, weights or order) or `salt` while the experiment has at least
@@ -246,8 +258,8 @@ call depends on the host wrapper. `react` is an optional peer dependency.
 
 `useVariant(peekRef, args) → string | null | undefined`
 
-Wraps a host query that calls `peek`. Returns the variant, `null` when not
-enrolled (experiment absent or not `running`), or `undefined` while loading.
+Wraps a host query that calls `peek`. Returns the variant, `null` when the
+experiment is absent or not `running`, or `undefined` while loading.
 `args`: `{ scope?: string; key: string; subjectRef: string }`.
 
 ### `useAssignment`
