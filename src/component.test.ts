@@ -29,11 +29,11 @@ vi.mock("./component/_generated/server.js", async (importOriginal) => {
   }
   const mutation: typeof original.mutation = (definition) => {
     if (typeof definition === "function") {
-      return original.mutation((ctx, args) => definition({ ...ctx, db: countingDb(ctx.db) }, args));
+      return original.mutation((ctx, ...args) => definition({ ...ctx, db: countingDb(ctx.db) }, ...args));
     }
     return original.mutation({
       ...definition,
-      handler: (ctx, args) => definition.handler({ ...ctx, db: countingDb(ctx.db) }, args),
+      handler: (ctx, ...args) => definition.handler({ ...ctx, db: countingDb(ctx.db) }, ...args),
     });
   };
   return { ...original, mutation };

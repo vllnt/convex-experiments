@@ -38,6 +38,9 @@ All notable changes to this project are documented here. The format is based on
   maintained LLM index and remove the generated `llms-full.txt` bundle.
 - Adopt pnpm 10 with a seven-day release-age gate and blocked dependency install scripts; drop
   dependency overrides that no longer change the lockfile.
+- Develop and test against `convex` 1.51 and `convex-test` 0.0.73, and move the development
+  toolchain to ESLint 10, jsdom 31, `@vllnt/typescript` 3 and Vitest 5.1.1. The `convex` peer range
+  (`^1.45.0`) is unchanged.
 - Publish `@latest` only from a `vX.Y.Z` tag on `main` (npm trusted publishing with provenance); pin all
   workflow actions and scope their permissions. No local publish scripts remain.
 - Exclude test files from the published package.
