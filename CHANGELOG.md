@@ -33,6 +33,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 
+- The publish workflow runs `pnpm test:package` before every canary and release; it now installs the
+  packed tarball in a clean project, imports its runtime entries and type-checks every export. The
+  tarball check also blocks `*.spec.mts` and `*.spec.cts` files.
 - `engines.node` is now `>=20`, matching the oldest supported `convex` peer (1.45 requires Node
   >=20; 1.51 requires >=22).
 - Rework the README for coding agents (fixed section order, type-checked examples, an errors table
