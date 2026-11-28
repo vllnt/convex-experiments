@@ -1,9 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["vitest/globals"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "types": ["vite/client", "vitest/globals"],
+    "rootDir": ".",
+    "noEmit": true
   },
   "include": ["src/**/*", "example/**/*"]
 }

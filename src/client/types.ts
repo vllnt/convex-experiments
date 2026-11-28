@@ -29,7 +29,11 @@ export interface DefineOptions {
    * `EXPERIMENT_LOCKED`); to re-randomize, define a new experiment key.
    */
   salt?: string;
-  /** Initial lifecycle status. Defaults to the client `defaultStatus`. */
+  /**
+   * Lifecycle status written on every `define` call, create or update. Defaults
+   * to the client `defaultStatus`, so omitting it on a re-define resets the
+   * status (a `stopped` experiment starts running again with the default client).
+   */
   status?: ExperimentStatus;
 }
 
@@ -52,15 +56,18 @@ export interface Assignment {
 }
 
 /**
- * Outcome of {@link Experiments.assign}. `{ variant: null }` — not enrolled
- * (experiment absent or not running). `{ variant, isNew }` — the enrolled variant,
+ * Outcome of {@link Experiments.assign}. `{ variant: null }` — the experiment is
+ * absent or not `running`, so nothing is written. `{ variant, isNew }` — the enrolled variant,
  * with `isNew` true only on the call that first persisted the assignment.
  */
 export type AssignOutcome =
   | { variant: null }
   | { variant: string; isNew: boolean };
 
-/** Outcome of {@link Experiments.logExposure}: the variant, or `null` if not enrolled. */
+/**
+ * Outcome of {@link Experiments.logExposure} and {@link Experiments.peek}: the
+ * variant, or `null` when the experiment is absent or not `running`.
+ */
 export type ExposureOutcome = { variant: string | null };
 
 /** A per-variant tally, as returned by {@link Experiments.results}. */

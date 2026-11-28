@@ -1,7 +1,7 @@
 {
   "name": "@vllnt/convex-experiments",
   "version": "0.2.0",
-  "description": "Deterministic A/B experimentation — sticky variant assignment and deduped exposure tracking, as a Convex component",
+  "description": "Deterministic A/B testing for Convex: sticky weighted variant assignment, deduped exposure tracking and per-variant tallies, as a Convex component.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.34.8",
@@ -47,13 +47,13 @@
     "build:codegen": "pnpm codegen && pnpm build",
     "build:clean": "rm -rf dist *.tsbuildinfo && pnpm build:codegen",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "typecheck:ci": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck-ci.tsbuildinfo --project tsconfig.ci.json",
+    "typecheck:ci": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck-ci.tsbuildinfo --project tsconfig.ci.json && tsc --noEmit --project tsconfig.test.json",
     "lint": "pnpm check:agents && eslint --cache --cache-location node_modules/.cache/eslint/ .",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --typecheck --clearScreen false",
     "test:coverage": "vitest run --coverage --coverage.reporter=text",
     "generate:llms": "node scripts/generate-llms.mjs",
-    "test:package": "node scripts/test-package.mjs",
+    "test:package": "node scripts/test-package.mjs && node scripts/check-docs.mjs",
     "preversion": "pnpm install --frozen-lockfile && pnpm build && pnpm test:coverage && pnpm typecheck && pnpm generate:llms",
     "check:agents": "node -e \"const f=require('node:fs');if(!f.existsSync('AGENTS.md')||f.existsSync('CLAUDE.md')||f.existsSync('.claude'))process.exit(1)\"",
     "codegen": "pnpm convex codegen --component-dir ./src/component"
@@ -104,7 +104,7 @@
     "url": "https://github.com/vllnt/convex-experiments"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"
@@ -113,10 +113,14 @@
   "keywords": [
     "convex",
     "convex-component",
-    "experiments",
     "ab-testing",
     "split-testing",
-    "feature-experimentation"
+    "experiments",
+    "experimentation",
+    "variant-assignment",
+    "exposure-tracking",
+    "typescript",
+    "react"
   ],
   "pnpm": {
     "minimumReleaseAge": 10080,

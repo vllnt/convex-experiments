@@ -12,7 +12,7 @@ export const experimentStatus = v.union(
 
 /**
  * Result of `assign`. `{ variant: null }` — the experiment is absent or not
- * `running`, so the subject is not enrolled (the host treats this as control).
+ * `running`, so nothing is written (the host treats this as control).
  * `{ variant, isNew }` — the enrolled variant key, with `isNew` true only on the
  * call that first persisted the assignment.
  */
@@ -22,8 +22,8 @@ export const assignResult = v.union(
 );
 
 /**
- * Result of `logExposure` / `peek`: the enrolled variant, or `null` when the
- * subject is not enrolled (experiment absent or not `running`).
+ * Result of `logExposure` / `peek`: the subject's variant, or `null` when the
+ * experiment is absent or not `running`.
  */
 export const exposureResult = v.union(
   v.object({ variant: v.null() }),

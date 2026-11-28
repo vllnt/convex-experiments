@@ -1,40 +1,56 @@
 # @vllnt/convex-experiments
 
-> Deterministic A/B experimentation — sticky variant assignment and deduped exposure tracking, as a Convex component
+> Deterministic A/B testing for Convex: sticky weighted variant assignment, deduped exposure tracking and per-variant tallies, as a Convex component.
 
-`@vllnt/convex-experiments` is a publishable Convex component. It targets `convex@^1.45.0`. It stores
-four sandboxed tables — `experiments` (the definition: weighted `variants`, lifecycle `status`,
-`salt`, unique per `(scope, key)`), `assignments` (a subject's sticky variant, persisted on first
-`assign`), `exposures` (a deduped per-subject row), and `variantTallies` (maintained per-variant
-`assigned`/`subjects`/`exposures` counts). A subject's variant is a pure function of
-`(scope, salt, subjectRef)` — FNV-1a hashed onto the cumulative-weight line, `scope` folded in so the
-same subject buckets independently per scope — sticky and weight-respecting even before persistence;
-`assign` records it, later calls replay it, and `peek` returns it read-only (no write) for SSR. `salt`
-and `variants` are immutable once a subject is assigned (`EXPERIMENT_LOCKED`); re-randomize by defining
-a new key. Enrollment is gated on `running` (`draft`/`stopped`/absent return `{ variant: null }`).
-`logExposure` dedups exposures and advances the tallies; `results` reads them in O(variants), returning
-`assigned`/`subjects`/`exposures`/`weight` per variant (enough for a sample-ratio-mismatch check).
-`forgetSubject` erases one subject (GDPR), `deleteExperiment` cascades, `listExperiments` discovers.
-Time is server-sourced. The component assigns + counts exposure; the host owns release control, the
-experiment/variant meaning, the opaque `subjectRef`, statistical significance, and the outcome metric
-(measured in the host's own tables, joined on the variant).
+Install `@vllnt/convex-experiments` (unreleased builds from `main` use the `canary`
+dist-tag). Peer dependency `convex@^1.45.0`; optional peer `react >=18` for the
+`./react` hooks; Node.js `>=20` (`convex` 1.51 needs `>=22`). Mount it with `app.use(experiments)` from
+`@vllnt/convex-experiments/convex.config` and call it through
+`new Experiments(components.experiments)` from host mutations and queries.
+Mutations: `define`, `setStatus`, `assign`, `logExposure`, `forgetSubject`,
+`deleteExperiment`. Queries: `getExperiment`, `listExperiments`,
+`getAssignment`, `peek`, `results`. Lifecycle: `draft` -> `running` ->
+`stopped`; only `running` enrolls, and `assign`/`logExposure`/`peek` return
+`{ variant: null }` otherwise (also for an absent experiment). A variant is a
+32-bit FNV-1a hash over the UTF-16 code units of `${scope}:${salt}:${subjectRef}`
+on the ordered cumulative-weight line; `salt` defaults to the key. `variants`
+and `salt` are immutable once a subject is assigned (`EXPERIMENT_LOCKED`); define
+a new key to re-randomize. Re-running `define` without `status` resets the status
+to the client `defaultStatus` (restarting a stopped experiment). Queries do not
+reject empty identifiers (`peek` with `subjectRef: ""` returns a variant). Every
+`logExposure` adds 1 to `exposures` (no idempotency key); `subjects` counts each
+subject once. `results` reads maintained per-variant tallies (`assigned`,
+`subjects`, `exposures`, `weight`) in O(variants). Client defaults:
+`defaultScope: "global"`, `defaultStatus: "running"`. Delete batches default to
+200 and must be integers 1..500 (`INVALID_BATCH`). Invalid input throws
+`ConvexError` with `data.code` `INVALID_ARGUMENT`, `INVALID_VARIANTS` (with a
+`reason`), `INVALID_BATCH` or `EXPERIMENT_LOCKED`. The host owns auth, the
+outcome metric (in its own tables, joined on the variant), significance tests
+and release control; scopes are not authorization.
 
-Client defaults are `defaultScope: "global"` and `defaultStatus: "running"` (define
-enrolls immediately unless configured otherwise). Salt defaults to the experiment key;
-bucketing hashes `${scope}:${salt}:${subjectRef}` and depends on ordered variants/weights.
-Exposure rows are per-subject, but repeated calls increment total exposures.
-Delete batches default to 200 per table, must be integers 1–500, and return only
-the current pass count. Named mounts isolate state; scopes are not authorization.
+## When to use
+
+- Use it when every subject must get one weighted variant of an experiment, the
+  same one on every later call.
+- Use it when you need per-variant counts of assigned subjects, exposed subjects
+  and exposures, or a variant before anything is written (`peek`).
+- Do not use it for release control, rollouts or kill-switches: use a
+  feature-flag system.
+- Do not use it to store outcomes or compute significance: use your own tables
+  or an analytics store, and a statistics tool.
 
 ## For coding agents
 
 The docs are bundled in the npm package at `node_modules/@vllnt/convex-experiments/docs/`
 and match the installed version. Read them, and the bundled `src/`, before writing code.
+The links below to `./` paths are files inside the installed package.
 
 ## Docs
 
-- [README](./README.md): Project overview, installation, usage examples, React hooks
-- [API Reference](./docs/API.md): Client methods, return shapes, input validation, error codes, entry points
+- [README](./README.md): Install, quick start, common tasks, limits
+- [API Reference](./docs/API.md): Every export, signature, return shape and validation rule
+- [Error codes](./docs/API.md#error-codes): Every error code and when it is thrown
+- [Errors and fixes](./README.md#errors-and-fixes): Every error code and message, its cause and the fix
 - [Changelog](./CHANGELOG.md): Version history and release notes
 - [License](./LICENSE): MIT license
 
@@ -47,9 +63,14 @@ and match the installed version. Read them, and the bundled `src/`, before writi
 
 ## Examples (repository only, not bundled; `main` may be newer than the installed version)
 
-- [Example component wrapper](https://github.com/vllnt/convex-experiments/blob/main/example/convex/example.ts): Host-side conversion recorder
+- [Example component wrapper](https://github.com/vllnt/convex-experiments/blob/main/example/convex/example.ts): Host-side wrappers and a conversion recorder
 - [Example tests](https://github.com/vllnt/convex-experiments/blob/main/example/convex/example.test.ts): Usage coverage with `convex-test`
 
 ## Ecosystem
 
-- [vllnt oss](https://oss.vllnt.com/llms.txt): Index of the other `@vllnt` packages
+- [Package page](https://oss.vllnt.com/packages/convex-experiments)
+- [Release feed](https://oss.vllnt.com/packages/convex-experiments/rss.xml)
+- [All @vllnt packages](https://oss.vllnt.com/llms.txt)
+- [Search vllnt packages and docs](https://index.vllnt.com)
+- [vllnt](https://vllnt.com/llms.txt)
+- [Author](https://bntvllnt.com)

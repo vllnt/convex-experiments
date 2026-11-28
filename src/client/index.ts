@@ -115,12 +115,12 @@ interface RunMutationCtx {
 }
 
 /**
- * Consumer-facing client for deterministic A/B experimentation. The host owns
- * meaning and auth; it passes an opaque `subjectRef` and variant keys, and the
- * component answers a sticky, weight-respecting variant plus a deduped exposure
- * tally. Assignment is release-control-free — pair it with a feature-flag
- * component for kill-switches; this layer only assigns and measures.
+ * Host-side client for the experiments component: define weighted experiments,
+ * assign each `subjectRef` a sticky variant, log exposures and read per-variant
+ * tallies. The host owns auth and passes opaque `subjectRef` and variant keys.
+ * The component does no release control and stores no outcome metric.
  *
+ * @see https://oss.vllnt.com/packages/convex-experiments
  * @example
  * ```ts
  * const experiments = new Experiments(components.experiments);
@@ -139,6 +139,12 @@ export class Experiments {
   private readonly defaultScope: string;
   private readonly defaultStatus: ExperimentStatus;
 
+  /**
+   * Create a client for one mounted component.
+   *
+   * @param component - The mount's function references, e.g. `components.experiments`.
+   * @param options - `defaultScope` (default `"global"`) and `defaultStatus` (default `"running"`).
+   */
   constructor(
     private readonly component: ExperimentsComponent,
     options: ExperimentsOptions = {},
@@ -206,8 +212,8 @@ export class Experiments {
 
   /**
    * Record an exposure (enrolling the subject if needed) and return their variant,
-   * or `null` if not enrolled. Repeated exposures for one subject are deduped into
-   * a single tallied row.
+   * or `null` when the experiment is absent or not `running`. Repeated exposures
+   * for one subject share one row; every call adds 1 to the variant's `exposures`.
    */
   logExposure(
     ctx: RunMutationCtx,
@@ -251,8 +257,8 @@ export class Experiments {
   /**
    * Read-only deterministic variant for a subject — the sticky variant **without
    * persisting**. Returns the stored assignment if present, else the deterministic
-   * pick; `null` when not enrolled. Use for SSR / a flicker-free first paint, then
-   * call `logExposure` to enroll + tally.
+   * pick; `null` when the experiment is absent or not `running`. Use for SSR / a
+   * flicker-free first paint, then call `logExposure` to enroll + tally.
    */
   peek(
     ctx: RunQueryCtx,
@@ -314,7 +320,8 @@ export class Experiments {
 
   /**
    * Delete an experiment and all of its data (definition, assignments, exposures,
-   * tallies). Bounded + self-rescheduling; returns the rows removed this pass.
+   * tallies). Bounded + self-rescheduling; returns the rows removed by this first
+   * pass (the definition row is not counted).
    * Idempotent and safe on an absent experiment.
    */
   deleteExperiment(
