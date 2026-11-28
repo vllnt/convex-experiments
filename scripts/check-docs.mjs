@@ -38,33 +38,51 @@ if (!existsSync(join(ROOT, "dist/client/index.d.ts"))) {
 }
 
 // ── Markdown helpers ─────────────────────────────────────────────────────────
+// Fenced code blocks as Markdown renders them: an opening fence is 3+ backticks
+// or tildes indented 0-3 spaces; it closes at a line with the same character,
+// at least as long, indented 0-3 spaces; an unclosed fence runs to the end.
+// Every check uses these fences, so no fence shape can hide a block or a
+// heading. The block loop below then rejects every shape except ``` at column 0.
+const FENCE = /^( {0,3})(`{3,}|~{3,})(.*)$/;
 function codeBlocks(markdown, file) {
   const blocks = [];
   const lines = markdown.split("\n");
   for (let i = 0; i < lines.length; i++) {
-    if (!lines[i].startsWith("```")) continue;
-    const end = lines.findIndex((l, j) => j > i && l.startsWith("```"));
-    if (end === -1) {
-      fail(`${file}:${i + 1} code block is not closed`);
-      break;
-    }
+    const open = FENCE.exec(lines[i]);
+    if (!open) continue;
+    const [, indent, marker, info] = open;
+    const end = lines.findIndex((l, j) => {
+      const close = j > i && FENCE.exec(l);
+      return (
+        close &&
+        close[2][0] === marker[0] &&
+        close[2].length >= marker.length &&
+        close[3].trim() === ""
+      );
+    });
+    const last = end === -1 ? lines.length : end;
     blocks.push({
       file,
-      lang: lines[i].slice(3).trim(),
+      lang: info.trim(),
       line: i + 1,
-      code: lines.slice(i + 1, end).join("\n"),
+      code: lines.slice(i + 1, last).join("\n"),
+      fenced: lines.slice(i, last + 1).map((_, k) => i + k + 1),
+      closed: end !== -1,
+      exact:
+        indent === "" &&
+        marker === "```" &&
+        (end === -1 || lines[end] === "```"),
     });
-    i = end;
+    i = last;
   }
   return blocks;
 }
 
 function headings(markdown) {
   const out = [];
-  let fenced = false;
+  const inFence = new Set(codeBlocks(markdown).flatMap((b) => b.fenced));
   markdown.split("\n").forEach((line, index) => {
-    if (line.startsWith("```")) fenced = !fenced;
-    const match = !fenced && /^(#{1,6}) (.+)$/.exec(line);
+    const match = !inFence.has(index + 1) && /^(#{1,6}) (.+)$/.exec(line);
     if (match)
       out.push({
         level: match[1].length,
@@ -286,6 +304,12 @@ for (const name of used)
 const LANGUAGES = new Set(["bash", "ts", "tsx", "json", "text"]);
 const allBlocks = DOCS.flatMap((file) => codeBlocks(read(file), file));
 for (const block of allBlocks) {
+  if (!block.exact)
+    fail(
+      `${block.file}:${block.line} code fence must be \`\`\` at column 0 (open and close)`,
+    );
+  if (!block.closed)
+    fail(`${block.file}:${block.line} code block is not closed`);
   if (!block.lang)
     fail(`${block.file}:${block.line} code block has no language tag`);
   else if (!LANGUAGES.has(block.lang))
@@ -323,7 +347,12 @@ for (const block of examples) {
 
 // ── Relative links and anchors ───────────────────────────────────────────────
 for (const file of DOCS) {
-  const text = read(file).replace(/```[\s\S]*?```/g, "");
+  const markdown = read(file);
+  const inFence = new Set(codeBlocks(markdown).flatMap((b) => b.fenced));
+  const text = markdown
+    .split("\n")
+    .filter((_, index) => !inFence.has(index + 1))
+    .join("\n");
   for (const [, target] of text.matchAll(/\]\(([^)\s]+)\)/g)) {
     if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
     const [path, hash] = target.split("#");

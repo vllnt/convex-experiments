@@ -29,7 +29,11 @@ export interface DefineOptions {
    * `EXPERIMENT_LOCKED`); to re-randomize, define a new experiment key.
    */
   salt?: string;
-  /** Initial lifecycle status. Defaults to the client `defaultStatus`. */
+  /**
+   * Lifecycle status written on every `define` call, create or update. Defaults
+   * to the client `defaultStatus`, so omitting it on a re-define resets the
+   * status (a `stopped` experiment starts running again with the default client).
+   */
   status?: ExperimentStatus;
 }
 

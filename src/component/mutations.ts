@@ -278,8 +278,11 @@ export const assign = mutation({
 
 /**
  * Record that `subjectRef` was exposed and return their variant, enrolling if
- * needed. First exposure inserts a tally row and bumps `subjects` + `exposures`;
- * later exposures bump `exposures` only (deduped per subject). `{ variant: null }`
+ * needed. A subject's first exposure inserts their exposure row and adds 1 to the
+ * variant tally's `subjects` + `exposures` (and `assigned` when this call enrolled
+ * them). The per-variant tally row is patched, or inserted if no earlier `assign`
+ * or `logExposure` created it. Later exposures bump the row's `count` and the
+ * tally's `exposures` only (deduped per subject). `{ variant: null }`
  * when the experiment is absent or not `running`. Time is server-sourced.
  */
 export const logExposure = mutation({

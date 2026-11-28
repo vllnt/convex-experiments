@@ -215,7 +215,9 @@ function references.
 ### `DefineOptions`
 
 `{ scope?: string; salt?: string; status?: ExperimentStatus }`: per-call
-overrides for `define`. `salt` defaults to the experiment key.
+overrides for `define`. `salt` defaults to the experiment key. `status` is
+written on every `define` call, create or update; omitting it on a re-define
+resets the status to the client `defaultStatus` (see [`define`](#define)).
 
 ### `ExperimentDefinition`
 
