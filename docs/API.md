@@ -165,8 +165,10 @@ is an optional peer dependency.
 ### Test helper
 
 `register(t, name = "experiments")` calls `t.registerComponent` with the
-component schema and modules. The consuming app needs `convex-test` and Vite's
-`import.meta.glob` (for example through `vitest`).
+component schema and modules. `t` is the host app's own
+`convexTest(hostSchema, modules)` instance, whatever its tables. The consuming
+app needs `convex-test` and Vite's `import.meta.glob` (for example through
+`vitest`).
 
 ## Error codes
 
