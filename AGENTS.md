@@ -15,9 +15,10 @@ Convex agent skills for common tasks can be installed by running
 `example/convex/_generated/ai/guidelines.md` is generated and not committed, so a fresh clone does
 not have it: create it with `npx convex ai-files install` (in this repo:
 `pnpm exec convex ai-files install`). That command also creates `CLAUDE.md` and the
-`.claude/skills/convex*` skill folders, which this repo does not allow (`pnpm lint` fails while
-`CLAUDE.md` or `.claude/` exists). Delete only those, then `.claude/` itself if it is now empty, and
-keep `AGENTS.md` as committed.
+`.claude/skills/convex*` folders, which this repo does not allow (`pnpm lint` fails while `CLAUDE.md`
+or `.claude/` exists), so delete them, then remove `.claude/skills/` and `.claude/` if they are now
+empty, and keep `AGENTS.md` as committed. The other files it writes (`.agents/`, `skills-lock.json`
+and the files under `example/convex/_generated/ai/`) are git-ignored and can stay.
 
 # @vllnt/convex-experiments
 
