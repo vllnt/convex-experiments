@@ -10,8 +10,8 @@ Convex agent skills for common tasks can be installed by running `npx convex ai-
 
 # @vllnt/convex-experiments
 
-Deterministic A/B experimentation — sticky variant assignment and deduped exposure tracking, as a
-Convex component. It follows the vllnt Component Standard (see the `oss-packages` hub
+Deterministic A/B testing for Convex: sticky weighted variant assignment, deduped exposure tracking
+and per-variant tallies, as a Convex component. It follows the vllnt Component Standard (see the `oss-packages` hub
 `AGENTS.md`).
 
 ## Agent instructions
@@ -144,13 +144,13 @@ passes an opaque `subjectRef`. `scope` namespaces per tenant / surface; both are
 
 | Changed | Update in the same commit |
 |---------|--------------------------|
-| Public API (define/setStatus/assign/logExposure/forgetSubject/deleteExperiment/getExperiment/listExperiments/getAssignment/peek/results) | README API Reference table, `docs/API.md`, `llms.txt` context |
-| Config options / defaults (`defaultScope`, `defaultStatus`, `salt`, delete batch) | README API Reference, `docs/API.md` constructor section |
-| Schema / tables / indexes | this file (Architecture), README Architecture, `docs/API.md` |
-| Error codes (`INVALID_VARIANTS`, `EXPERIMENT_LOCKED`) | `docs/API.md` → `## Error codes` table |
-| `peerDependencies.convex` version | `llms.txt` context line (`convex@^X.Y.Z`), `docs/API.md` Compatibility line, README Installation peer note |
+| Public API (define/setStatus/assign/logExposure/forgetSubject/deleteExperiment/getExperiment/listExperiments/getAssignment/peek/results) | README `## API` table, `docs/API.md` heading per export, `llms.txt` context |
+| Config options / defaults (`defaultScope`, `defaultStatus`, `salt`, delete batch) | README `## Limits and gotchas`, `docs/API.md` `Experiments` section |
+| Schema / tables / indexes | this file (Architecture), `docs/API.md` |
+| Error codes, reasons, messages (`INVALID_ARGUMENT`, `INVALID_VARIANTS`, `INVALID_BATCH`, `EXPERIMENT_LOCKED`) | README `## Errors and fixes`, `docs/API.md` → `## Error codes` table |
+| `peerDependencies.convex` version | `llms.txt` context line (`convex@^X.Y.Z`), `docs/API.md` Compatibility line, README `## Compatibility` |
 | Assignment / exposure / tally semantics | `docs/API.md`, Key design decisions above |
-| Any change | `pnpm generate:llms` to validate the `llms.txt` index |
+| Any change | `pnpm generate:llms`, then `pnpm build && pnpm test:package` (runs `scripts/check-docs.mjs`, the CI-enforced docs contract) |
 
 Grep old values before committing (e.g. `git grep "1.36.1"` → must be empty).
 

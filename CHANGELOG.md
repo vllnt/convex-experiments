@@ -33,6 +33,11 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 
+- Rework the README for coding agents (fixed section order, type-checked examples, an errors table
+  and a limits list), rewrite `docs/API.md` with one heading per export, refresh `llms.txt`, add
+  TSDoc to every public export, and set the `description` and `keywords` to match the code.
+  `pnpm test:package` now also runs `scripts/check-docs.mjs`, which enforces these docs.
+  `pnpm typecheck:ci` now also type-checks `example/` and the tests.
 - `deleteExperiment` deletes the definition in the same pass once every child table returns fewer rows
   than `batch`, which can save the final scheduled mutation of a delete.
 - `define` and `setStatus` skip the write when nothing changed, so idempotent re-defines no longer

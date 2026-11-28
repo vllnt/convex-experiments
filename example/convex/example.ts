@@ -81,9 +81,9 @@ export const define = mutation({
   handler: (ctx, a) =>
     experiments.define(ctx, a.key, {
       variants: a.variants,
-      scope: a.scope,
-      salt: a.salt,
-      status: a.status,
+      ...(a.scope === undefined ? {} : { scope: a.scope }),
+      ...(a.salt === undefined ? {} : { salt: a.salt }),
+      ...(a.status === undefined ? {} : { status: a.status }),
     }),
 });
 
@@ -141,7 +141,10 @@ export const listExperiments = query({
   args: { scope: v.optional(v.string()), status: v.optional(statusArg) },
   returns: experimentList,
   handler: (ctx, a) =>
-    experiments.listExperiments(ctx, { scope: a.scope, status: a.status }),
+    experiments.listExperiments(ctx, {
+      ...(a.scope === undefined ? {} : { scope: a.scope }),
+      ...(a.status === undefined ? {} : { status: a.status }),
+    }),
 });
 
 /** Minimal listExperiments — omits scope + status to exercise client defaults. */
@@ -166,7 +169,10 @@ export const deleteExperiment = mutation({
   },
   returns: v.number(),
   handler: (ctx, a) =>
-    experiments.deleteExperiment(ctx, a.key, { scope: a.scope, batch: a.batch }),
+    experiments.deleteExperiment(ctx, a.key, {
+      ...(a.scope === undefined ? {} : { scope: a.scope }),
+      ...(a.batch === undefined ? {} : { batch: a.batch }),
+    }),
 });
 
 /** Minimal deleteExperiment — omits scope + batch to exercise the default batch. */

@@ -60,7 +60,10 @@ export type AssignOutcome =
   | { variant: null }
   | { variant: string; isNew: boolean };
 
-/** Outcome of {@link Experiments.logExposure}: the variant, or `null` if not enrolled. */
+/**
+ * Outcome of {@link Experiments.logExposure} and {@link Experiments.peek}: the
+ * variant, or `null` when the experiment is absent or not `running`.
+ */
 export type ExposureOutcome = { variant: string | null };
 
 /** A per-variant tally, as returned by {@link Experiments.results}. */
