@@ -184,7 +184,9 @@ try {
   const project = join(tmp, "consumer");
   mkdirSync(project);
   const write = (file, content) => writeFileSync(join(project, file), content);
-  // The repo's pnpm settings carry the release-age gate and blocked build scripts.
+  // The repo's pnpm settings carry the blocked build scripts (package.json) and the
+  // release-age gate (pnpm-workspace.yaml). The copied workspace file makes the
+  // consumer its own workspace root; `--ignore-workspace` would drop its settings.
   write(
     "package.json",
     JSON.stringify({
@@ -194,16 +196,15 @@ try {
       pnpm: pkg.pnpm,
     }),
   );
+  write(
+    "pnpm-workspace.yaml",
+    readFileSync(join(directory, "pnpm-workspace.yaml"), "utf8"),
+  );
 
   const installed = run(
     "pnpm install of the packed tarball",
     "pnpm",
-    [
-      "install",
-      "--ignore-workspace",
-      "--no-frozen-lockfile",
-      "--prefer-offline",
-    ],
+    ["install", "--no-frozen-lockfile", "--prefer-offline"],
     project,
   );
   if (installed) {

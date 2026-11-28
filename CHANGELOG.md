@@ -52,6 +52,9 @@ All notable changes to this project are documented here. The format is based on
   maintained LLM index and remove the generated `llms-full.txt` bundle.
 - Adopt pnpm 10 with a seven-day release-age gate and blocked dependency install scripts; drop
   dependency overrides that no longer change the lockfile.
+- Move the seven-day release-age gate (`minimumReleaseAge`, `@vllnt/*` excluded) from `package.json`,
+  where pnpm 10 ignores it, to `pnpm-workspace.yaml`, so every new resolution and `pnpm test:package`
+  enforce it; Renovate now waits seven days too, except for `@vllnt/*`.
 - Develop and test against `convex` 1.51 and `convex-test` 0.0.73, and move the development
   toolchain to ESLint 10, jsdom 31, `@vllnt/typescript` 3 and Vitest 5.1.1. The `convex` peer range
   (`^1.45.0`) is unchanged.
